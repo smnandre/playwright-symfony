@@ -1,0 +1,160 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  tests:
+    name: PHP ${{ matrix.php }} / Symfony ${{ matrix.symfony }}
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        php: ['8.3', '8.4']
+        symfony: ['7.0', '8.0']
+        exclude:
+          - php: '8.3'
+            symfony: '8.0'  # Symfony 8.0 requires PHP 8.4+
+            
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: pcov
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Playwright
+        run: |
+          npm install -g playwright@latest
+          playwright install chromium --with-deps
+
+      - name: Get composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache composer dependencies
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+
+      - name: Install dependencies
+        run: composer install --no-progress --prefer-dist --optimize-autoloader
+        env:
+          SYMFONY_REQUIRE: ${{ matrix.symfony }}.*
+
+      - name: Install app dependencies
+        run: |
+          cd app
+          composer install --no-progress --prefer-dist --optimize-autoloader
+
+      - name: Run code style check
+        run: composer cs-check
+
+#      - name: Run PHPStan
+#        run: vendor/bin/phpstan analyse --no-progress
+
+      - name: Debug Playwright setup
+        run: php bin/console debug:playwright || true
+
+      - name: Run unit tests
+        run: composer test
+        env:
+          PLAYWRIGHT_HEADLESS: true
+
+      - name: Run E2E tests
+        run: |
+          cd app
+          vendor/bin/phpunit
+        env:
+          PLAYWRIGHT_HEADLESS: true
+
+      - name: Generate test coverage
+        run: composer test-coverage
+        env:
+          PLAYWRIGHT_HEADLESS: true
+
+  code-quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+
+      - name: Install dependencies
+        run: composer install --no-progress --prefer-dist --optimize-autoloader
+
+      - name: Run PHP CS Fixer (dry run)
+        run: composer cs-check
+
+      - name: Run PHPStan
+        run: vendor/bin/phpstan analyse --no-progress
+
+  bundle-test:
+    name: Bundle Integration Test
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, xml, ctype, iconv, intl
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install Playwright
+        run: |
+          npm install -g playwright@latest
+          playwright install chromium --with-deps
+
+      - name: Create test Symfony app
+        run: |
+          composer create-project symfony/skeleton bundle-test
+          cd bundle-test
+          composer require --dev phpunit/phpunit
+          
+      - name: Add bundle to test app
+        run: |
+          cd bundle-test
+          echo '{
+            "repositories": [
+              {
+                "type": "path",
+                "url": "..",
+                "options": {"symlink": false}
+              }
+            ]
+          }' > composer.local.json
+          composer require playwright-php/playwright-symfony:*
+          
+      - name: Test bundle integration
+        run: |
+          cd bundle-test
+          php bin/console debug:playwright
+          php bin/console debug:container | grep -i playwright
