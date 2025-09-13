@@ -190,14 +190,19 @@ return [
 playwright:
     intercepted_hosts:
         - 'localhost'
-        - '127.0.0.1' 
-        - 'myapp.local'
+        - '127.0.0.1'
+        - 'testapp.local'
     debug: '%kernel.debug%'
+    default_browser: 'default'
     browsers:
         default:
             type: 'chromium'
             headless: true
-    default_browser: 'default'
+            timeout_ms: 30000
+            slowmo_ms: 0
+        firefox:
+            type: 'firefox'
+            headless: true
 ```
 
 3. **Create your test base class**:
@@ -259,7 +264,7 @@ class LoginTest extends BaseE2ETest
 
         // Wait for navigation and verify result
         $page->waitForLoadState();
-        $this->assertStringContains('Dashboard', $page->content());
+        $this->assertPageContains('Dashboard');
 
         // Access intercepted request/response
         $response = $this->getLastResponse();
@@ -277,7 +282,7 @@ class LoginTest extends BaseE2ETest
         $authCookie = $this->getCookie('AUTH');
         $this->assertNotNull($authCookie);
         
-        $this->assertStringContains('Admin Panel', $page->content());
+        $this->assertPageContains('Admin Panel');
     }
 }
 ```
@@ -286,7 +291,7 @@ class LoginTest extends BaseE2ETest
 
 **For applications with existing test infrastructure**:
 
-1. Place E2E tests in `tests/E2E/` directory
+1. Place E2E tests in `tests/Integration/E2E/` directory (this repository’s convention)
 2. Configure separate test database for E2E tests
 3. Use environment variables to control test behavior:
    - `KERNEL_CLASS` - Custom kernel class
@@ -317,7 +322,7 @@ jobs:
         run: npx playwright install chromium --with-deps
       
       - name: Run E2E tests
-        run: vendor/bin/phpunit tests/E2E/
+        run: vendor/bin/phpunit tests/Integration/E2E/
         env:
           PLAYWRIGHT_HEADLESS: true
 ```
@@ -343,10 +348,9 @@ The bundle provides these methods in `PlaywrightTestCase`:
 - `getLastRequest(): ?SymfonyRequest` - Get last intercepted request
 - `getLastResponse(): ?SymfonyResponse` - Get last intercepted response
 
-**Hooks (override in your tests):**
+**Hooks (public methods you can override):**
 - `beforeRequest(SymfonyRequest $request): void` - Called before each request
 - `afterResponse(SymfonyResponse $response): void` - Called after each response
-- `loadFixtures(array $fixtures): void` - Override to load test data
 
 All browser interactions use the native [Playwright PHP Page API](https://github.com/playwright-php/playwright).
 
@@ -359,14 +363,14 @@ All browser interactions use the native [Playwright PHP Page API](https://github
 ## Running Tests
 
 ```bash
-# Run all E2E tests
-vendor/bin/phpunit tests/E2E
+# Run all E2E tests (repository convention)
+vendor/bin/phpunit tests/Integration/E2E
 
 # Run with visible browser
-PLAYWRIGHT_HEADLESS=false vendor/bin/phpunit tests/E2E
+PLAYWRIGHT_HEADLESS=false vendor/bin/phpunit tests/Integration/E2E
 
-# Run specific test
-vendor/bin/phpunit tests/E2E/UserFlowTest.php
+# Run specific test file
+vendor/bin/phpunit tests/Integration/E2E/HelloE2ETest.php
 ```
 
 ## Tips and Best Practices
@@ -400,10 +404,10 @@ public function testApiCalls(): void
 
 ```bash
 # Show browser during tests
-PLAYWRIGHT_HEADLESS=false vendor/bin/phpunit tests/E2E/
+PLAYWRIGHT_HEADLESS=false vendor/bin/phpunit tests/Integration/E2E/
 
 # Use different browser
-PLAYWRIGHT_BROWSER=firefox vendor/bin/phpunit tests/E2E/
+PLAYWRIGHT_BROWSER=firefox vendor/bin/phpunit tests/Integration/E2E/
 ```
 
 ## Comparison with WebTestCase
@@ -419,7 +423,7 @@ PLAYWRIGHT_BROWSER=firefox vendor/bin/phpunit tests/E2E/
 | Multiple Tabs        | ❌           | ✅                  |
 | Request Interception | ✅           | ✅                  |
 | Symfony Integration  | ✅           | ✅                  |
-| Transaction Rollback | ✅           | ✅                  |
+| Transaction Rollback | Depends     | Depends            |
 
 ## Contributing
 

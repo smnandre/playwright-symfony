@@ -1,0 +1,272 @@
+<?php
+
+declare(strict_types=1);
+
+/*
+ * This file is part of the playwright-php/playwright package.
+ * For the full copyright and license information, please view
+ * the LICENSE file that was distributed with this source code.
+ */
+
+namespace PlaywrightPHP\Symfony\Tests\Client\Fixtures;
+
+use PlaywrightPHP\Browser\BrowserContextInterface;
+use PlaywrightPHP\Frame\FrameInterface;
+use PlaywrightPHP\Frame\FrameLocatorInterface;
+use PlaywrightPHP\Input\KeyboardInterface;
+use PlaywrightPHP\Input\MouseInterface;
+use PlaywrightPHP\Locator\LocatorInterface;
+use PlaywrightPHP\Network\RequestInterface;
+use PlaywrightPHP\Network\ResponseInterface;
+use PlaywrightPHP\Page\PageEventHandlerInterface;
+use PlaywrightPHP\Page\PageInterface;
+
+class FakePage implements PageInterface
+{
+    public ?string $lastGoto = null;
+    /** @var callable|null */
+    private $routeHandler;
+
+    public function __construct(private BrowserContextInterface $context)
+    {
+    }
+
+    public function route(string $pattern, callable $handler): void
+    {
+        $this->routeHandler = $handler;
+    }
+
+    public function goto(string $url, array $options = []): ?ResponseInterface
+    {
+        $this->lastGoto = $url;
+
+        return null;
+    }
+
+    public function triggerRequest(RequestInterface $request): FakeRoute
+    {
+        $route = new FakeRoute($request);
+        if ($this->routeHandler) {
+            ($this->routeHandler)($route);
+        }
+
+        return $route;
+    }
+
+    public function locator(string $selector): LocatorInterface
+    {
+        return new class implements LocatorInterface {
+            public function __call($n, $a)
+            {
+                return null;
+            }
+        };
+    }
+
+    public function click(string $selector, array $options = []): PageInterface
+    {
+        return $this;
+    }
+
+    public function altClick(string $selector, array $options = []): PageInterface
+    {
+        return $this;
+    }
+
+    public function controlClick(string $selector, array $options = []): PageInterface
+    {
+        return $this;
+    }
+
+    public function shiftClick(string $selector, array $options = []): PageInterface
+    {
+        return $this;
+    }
+
+    public function type(string $selector, string $text, array $options = []): PageInterface
+    {
+        return $this;
+    }
+
+    public function screenshot(?string $path = null, array $options = []): string
+    {
+        return '';
+    }
+
+    public function content(): ?string
+    {
+        return '';
+    }
+
+    public function evaluate(string $expression, mixed $arg = null): mixed
+    {
+        return null;
+    }
+
+    public function waitForSelector(string $selector, array $options = []): ?LocatorInterface
+    {
+        return null;
+    }
+
+    public function close(): void
+    {
+    }
+
+    public function bringToFront(): PageInterface
+    {
+        return $this;
+    }
+
+    public function context(): BrowserContextInterface
+    {
+        return $this->context;
+    }
+
+    public function cookies(?array $urls = null): array
+    {
+        return method_exists($this->context, 'cookies') ? $this->context->cookies($urls) : [];
+    }
+
+    public function goBack(array $options = []): PageInterface
+    {
+        return $this;
+    }
+
+    public function goForward(array $options = []): PageInterface
+    {
+        return $this;
+    }
+
+    public function reload(array $options = []): PageInterface
+    {
+        return $this;
+    }
+
+    public function setContent(string $html, array $options = []): PageInterface
+    {
+        return $this;
+    }
+
+    public function url(): string
+    {
+        return $this->lastGoto ?? 'http://localhost/';
+    }
+
+    public function title(): string
+    {
+        return 'fake';
+    }
+
+    public function viewportSize(): ?array
+    {
+        return ['width' => 800, 'height' => 600];
+    }
+
+    public function setViewportSize(int $width, int $height): PageInterface
+    {
+        return $this;
+    }
+
+    public function waitForLoadState(string $state = 'load', array $options = []): PageInterface
+    {
+        return $this;
+    }
+
+    public function waitForURL($url, array $options = []): PageInterface
+    {
+        return $this;
+    }
+
+    public function addScriptTag(array $options): PageInterface
+    {
+        return $this;
+    }
+
+    public function addStyleTag(array $options): PageInterface
+    {
+        return $this;
+    }
+
+    public function frameLocator(string $selector): FrameLocatorInterface
+    {
+        return new class implements FrameLocatorInterface {
+            public function __call($n, $a)
+            {
+                return $this;
+            }
+        };
+    }
+
+    public function keyboard(): KeyboardInterface
+    {
+        return new class implements KeyboardInterface {
+            public function __call($n, $a)
+            {
+                return null;
+            }
+        };
+    }
+
+    public function mouse(): MouseInterface
+    {
+        return new class implements MouseInterface {
+            public function __call($n, $a)
+            {
+                return null;
+            }
+        };
+    }
+
+    public function events(): PageEventHandlerInterface
+    {
+        return new class implements PageEventHandlerInterface {
+            public function __call($n, $a)
+            {
+                return $this;
+            }
+        };
+    }
+
+    public function unroute(string $url, ?callable $handler = null): void
+    {
+        $this->routeHandler = null;
+    }
+
+    public function handleDialog(string $dialogId, bool $accept, ?string $promptText = null): void
+    {
+    }
+
+    public function getPageIdForTransport(): string
+    {
+        return 'fake-page-id';
+    }
+
+    public function waitForEvents(): void
+    {
+    }
+
+    public function setInputFiles(string $selector, array $files, array $options = []): PageInterface
+    {
+        return $this;
+    }
+
+    public function mainFrame(): FrameInterface
+    {
+        return new class implements FrameInterface {
+            public function __call($n, $a)
+            {
+                return null;
+            }
+        };
+    }
+
+    public function frames(): array
+    {
+        return [];
+    }
+
+    public function frame(array $options): ?FrameInterface
+    {
+        return null;
+    }
+}
