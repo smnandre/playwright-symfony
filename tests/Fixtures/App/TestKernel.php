@@ -23,7 +23,7 @@ class TestKernel extends BaseKernel
 
     public function __construct(string $environment, bool $debug)
     {
-        // Force debug to false to reduce log noise in tests
+        // Disable debug mode to prevent output that causes risky tests
         parent::__construct($environment, false);
     }
 
@@ -37,17 +37,48 @@ class TestKernel extends BaseKernel
     {
         $container->extension('framework', [
             'secret' => 'test-secret-for-testing',
-            'router' => ['utf8' => true],
+            'router' => [
+                'utf8' => true,
+                'strict_requirements' => null,
+            ],
             'cache' => [
-                'directory' => sys_get_temp_dir().'/playwright-symfony-test-cache',
+                'directory' => __DIR__.'/var/playwright-symfony-test-cache',
+                'app' => 'cache.adapter.filesystem',
+                'pools' => [
+                    'cache.asset_mapper' => [
+                        'adapter' => 'cache.adapter.filesystem',
+                    ],
+                ],
+            ],
+            'assets' => [
+                'enabled' => true,
             ],
             'test' => true,
+            'asset_mapper' => [
+                'server' => true,
+                'paths' => [
+                    __DIR__.'/assets',
+                ],
+                'importmap_path' => __DIR__.'/importmap.php',
+            ],
+            'http_client' => false,
         ]);
 
+        // Register controllers as services with autowiring/autoconfiguration
+        $services = $container->services()
+            ->defaults()
+                ->autowire()
+                ->autoconfigure();
+
+        $services
+            ->load('Playwright\\Symfony\\Tests\\Fixtures\\App\\Controller\\', __DIR__.'/Controller/*')
+            ->public();
+
+        // Minimal Playwright config for tests
         $container->extension('playwright', [
             'enabled' => true,
             'intercepted_hosts' => ['localhost', '127.0.0.1', 'testapp.local'],
-            'debug' => false, // Disable debug to reduce log noise
+            'debug' => false,
         ]);
     }
 
@@ -78,15 +109,45 @@ class TestKernel extends BaseKernel
         $routes->add('form', '/form')
             ->controller([Controller\FormController::class, 'show'])
             ->methods(['GET', 'POST']);
+
+        $routes->add('assetmapper', '/assetmapper')
+            ->controller([Controller\AssetMapperController::class, 'demo'])
+            ->methods(['GET']);
+
+        $routes->add('assetmapper_trailing', '/assetmapper/')
+            ->controller([Controller\AssetMapperController::class, 'demo'])
+            ->methods(['GET']);
+
+        $routes->add('helper_demo', '/helper-demo')
+            ->controller(Controller\HelperDemoController::class)
+            ->methods(['GET', 'POST']);
+
+        // Navigation routes - must be last to act as catch-all
+        $routes->add('nav_root', '/')
+            ->controller([Controller\NavigationController::class, 'navigate'])
+            ->defaults(['path' => '']);
+
+        $routes->add('nav_path_trailing', '/{path}/')
+            ->controller([Controller\NavigationController::class, 'navigate'])
+            ->requirements(['path' => '[12]+']);
+
+        $routes->add('nav_path', '/{path}')
+            ->controller([Controller\NavigationController::class, 'navigate'])
+            ->requirements(['path' => '[12]+']);
     }
 
     public function getCacheDir(): string
     {
-        return sys_get_temp_dir().'/playwright-symfony-test-cache/'.$this->environment;
+        return __DIR__.'/var/playwright-symfony-test-cache/'.$this->environment;
     }
 
     public function getLogDir(): string
     {
-        return sys_get_temp_dir().'/playwright-symfony-test-logs';
+        return __DIR__.'/var/playwright-symfony-test-logs/'.$this->environment;
+    }
+
+    public function getBuildDir(): string
+    {
+        return __DIR__.'/var/playwright-symfony-test-build/'.$this->environment;
     }
 }

@@ -13,12 +13,16 @@ namespace Playwright\Symfony\Tests\Test;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Playwright\Network\Request;
+use Playwright\Symfony\Client\RequestConverter;
+use Playwright\Symfony\Client\ResponseConverter;
 use Playwright\Symfony\Test\PlaywrightTestCase;
 use Playwright\Symfony\Tests\Fixtures\MockRequest;
 use Playwright\Symfony\Tests\Fixtures\Tests\ConcretePlaywrightTestCase;
 use Symfony\Component\HttpFoundation\Response;
 
 #[CoversClass(PlaywrightTestCase::class)]
+#[CoversClass(RequestConverter::class)]
+#[CoversClass(ResponseConverter::class)]
 class PlaywrightTestCaseTest extends TestCase
 {
     private ConcretePlaywrightTestCase $testCase;

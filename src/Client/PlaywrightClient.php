@@ -8,16 +8,21 @@ declare(strict_types=1);
  * the LICENSE file that was distributed with this source code.
  */
 
-namespace PlaywrightPHP\Symfony\Client;
+namespace Playwright\Symfony\Client;
 
-use PlaywrightPHP\Network\RequestInterface;
-use PlaywrightPHP\Page\PageInterface;
-use PlaywrightPHP\Symfony\Browser\PlaywrightBrowser;
+use Playwright\Network\RequestInterface;
+use Playwright\Page\PageInterface;
+use Playwright\Symfony\Browser\PlaywrightBrowser;
+use Playwright\Symfony\Client\Interception\AssetServer;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 use Symfony\Component\BrowserKit\AbstractBrowser;
 use Symfony\Component\BrowserKit\Response;
 use Symfony\Component\HttpFoundation\Request as SymfonyRequest;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
+use Symfony\Component\HttpKernel\Profiler\Profile;
+use Symfony\Component\HttpKernel\Profiler\Profiler;
 
 /**
  * BrowserKit-compatible client that uses Playwright for browser automation
@@ -36,6 +41,8 @@ class PlaywrightClient extends AbstractBrowser
     private array $interceptedHosts = ['localhost', '127.0.0.1', 'testapp.local'];
     private ?object $hookReceiver = null;
     private bool $interceptorSetUp = false;
+    private ?AssetServer $assetServer;
+    private ?string $lastProfileToken = null;
 
     public function __construct(
         private readonly PlaywrightBrowser $browser,
@@ -45,6 +52,10 @@ class PlaywrightClient extends AbstractBrowser
         array $server = [],
         ?array $interceptedHosts = null,
         ?object $hookReceiver = null,
+        ?AssetServer $assetServer = null,
+        private readonly string $baseUrl = 'http://localhost',
+        private ?LoggerInterface $logger = null,
+        private readonly bool $debugLogging = false,
     ) {
         parent::__construct($server);
 
@@ -53,12 +64,15 @@ class PlaywrightClient extends AbstractBrowser
         }
 
         $this->hookReceiver = $hookReceiver;
+        $this->assetServer = $assetServer;
+        $this->logger = $logger ?? new NullLogger();
     }
 
     public function visit(string $path): PageInterface
     {
         $this->ensureInterceptorSetUp();
         $url = $this->getBaseUrl().$path;
+        $this->log('debug', 'Navigating with Playwright', ['url' => $url]);
         $page = $this->browser->getPage();
         $page->goto($url);
 
@@ -144,9 +158,33 @@ class PlaywrightClient extends AbstractBrowser
         return $this->lastSymfonyResponse;
     }
 
+    public function getProfile(): ?Profile
+    {
+        if (null === $this->lastProfileToken) {
+            return null;
+        }
+
+        // Access the container from the kernel to get the profiler service
+        // We use $this->kernel->getContainer() directly which implies a booted kernel.
+        // In a test environment, the kernel is usually booted in setUp.
+        if (!$this->kernel->getContainer()->has('profiler')) {
+            return null;
+        }
+
+        /** @var Profiler $profiler */
+        $profiler = $this->kernel->getContainer()->get('profiler');
+
+        // The profiler service might be null in some test configurations (e.g. if WebProfilerBundle is not enabled).
+        if (null === $profiler) {
+            return null;
+        }
+
+        return $profiler->loadProfile($this->lastProfileToken);
+    }
+
     public function getBaseUrl(): string
     {
-        return 'http://localhost';
+        return $this->baseUrl;
     }
 
     public function setInterceptedHosts(array $hosts): void
@@ -172,12 +210,37 @@ class PlaywrightClient extends AbstractBrowser
             $request = $route->request();
             $url = parse_url($request->url());
 
-            if ($this->shouldInterceptRequest($url)) {
-                $response = $this->handleInternalRequest($request);
-                $route->fulfill($this->responseConverter->prepareFulfillOptions($response));
-            } else {
+            if (!$this->shouldInterceptRequest($url)) {
+                $this->log('debug', 'Continuing external request', [
+                    'url' => $request->url(),
+                    'method' => $request->method(),
+                ]);
                 $route->continue();
+                return;
             }
+
+            if (
+                $this->assetServer
+                && $this->assetServer->supports($request->url(), $request->method())
+            ) {
+                $assetResponse = $this->assetServer->handle($request->url(), $request->method());
+                if (null !== $assetResponse) {
+                    $this->log('debug', 'AssetServer fulfilled request', [
+                        'url' => $request->url(),
+                        'method' => $request->method(),
+                    ]);
+                    $route->fulfill($assetResponse);
+                    return;
+                }
+
+                $this->log('debug', 'AssetServer miss falling back to kernel', [
+                    'url' => $request->url(),
+                    'method' => $request->method(),
+                ]);
+            }
+
+            $response = $this->handleInternalRequest($request);
+            $route->fulfill($this->responseConverter->prepareFulfillOptions($response));
         });
     }
 
@@ -189,16 +252,53 @@ class PlaywrightClient extends AbstractBrowser
     private function handleInternalRequest(RequestInterface $playwrightRequest): SymfonyResponse
     {
         $symfonyRequest = $this->requestConverter->convertToSymfonyRequest($playwrightRequest);
+        $startedAt = microtime(true);
 
         $this->beforeRequest($symfonyRequest);
 
-        $this->lastSymfonyRequest = $symfonyRequest;
-        $response = $this->kernel->handle($symfonyRequest, HttpKernelInterface::MAIN_REQUEST, false);
-        $this->lastSymfonyResponse = $response;
+        // Capture any debug output that might be generated
+        $bufferLevel = ob_get_level();
+        ob_start();
+        
+        try {
+            $this->lastSymfonyRequest = $symfonyRequest;
+            $response = $this->kernel->handle($symfonyRequest, HttpKernelInterface::MAIN_REQUEST, false);
+            $this->lastSymfonyResponse = $response;
 
-        $this->afterResponse($response);
+            if ($response->headers->has('X-Debug-Token')) {
+                $this->lastProfileToken = $response->headers->get('X-Debug-Token');
+            }
 
-        return $response;
+            // Only clean the buffer if we started it
+            while (ob_get_level() > $bufferLevel) {
+                ob_end_clean();
+            }
+
+            $this->afterResponse($response);
+
+            $this->log('info', 'Fulfilled intercepted request', [
+                'method' => $symfonyRequest->getMethod(),
+                'uri' => $symfonyRequest->getUri(),
+                'status_code' => $response->getStatusCode(),
+                'duration_ms' => (int) ((microtime(true) - $startedAt) * 1000),
+            ]);
+
+            return $response;
+        } catch (\Throwable $e) {
+            // Clean up output buffers even when an exception occurs
+            while (ob_get_level() > $bufferLevel) {
+                ob_end_clean();
+            }
+
+            $this->log('error', 'Exception while handling intercepted request', [
+                'method' => $symfonyRequest->getMethod(),
+                'uri' => $symfonyRequest->getUri(),
+                'exception' => $e::class,
+                'message' => $e->getMessage(),
+            ], false);
+            
+            throw $e;
+        }
     }
 
     protected function beforeRequest(SymfonyRequest $request): void
@@ -221,5 +321,14 @@ class PlaywrightClient extends AbstractBrowser
             $this->setupRequestInterception();
             $this->interceptorSetUp = true;
         }
+    }
+
+    private function log(string $level, string $message, array $context = [], bool $requiresDebug = true): void
+    {
+        if ($requiresDebug && !$this->debugLogging) {
+            return;
+        }
+
+        $this->logger->log($level, $message, $context);
     }
 }

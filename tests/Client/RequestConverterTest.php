@@ -8,12 +8,12 @@ declare(strict_types=1);
  * the LICENSE file that was distributed with this source code.
  */
 
-namespace PlaywrightPHP\Symfony\Tests\Client;
+namespace Playwright\Symfony\Tests\Client;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
-use PlaywrightPHP\Symfony\Client\RequestConverter;
-use PlaywrightPHP\Symfony\Tests\Fixtures\MockRequest;
+use Playwright\Symfony\Client\RequestConverter;
+use Playwright\Symfony\Tests\Fixtures\MockRequest;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 
 #[CoversClass(RequestConverter::class)]
@@ -59,5 +59,39 @@ class RequestConverterTest extends TestCase
         self::assertInstanceOf(UploadedFile::class, $file);
         self::assertSame('test.txt', $file->getClientOriginalName());
         self::assertSame('text/plain', $file->getClientMimeType());
+    }
+
+    public function testMultipartSupportsArrayFieldsAndUtf8Filenames(): void
+    {
+        $boundary = 'Boundary123';
+        $binary = "Hello\0World\n";
+        $body = "--$boundary\r\n".
+            "Content-Disposition: form-data; name=\"items[details][name]\"\r\n\r\nWidget\r\n".
+            "--$boundary\r\n".
+            "Content-Disposition: form-data; name=\"attachments[]\"; filename*=UTF-8''caf%C3%A9.txt\r\n".
+            "Content-Type: text/plain\r\n\r\n$binary\r\n".
+            "--$boundary--\r\n";
+
+        $converter = new RequestConverter();
+        $request = new MockRequest(
+            url: 'http://localhost/upload',
+            method: 'POST',
+            headers: ['content-type' => 'multipart/form-data; boundary='.$boundary],
+            postData: $body,
+        );
+
+        $symfony = $converter->convertToSymfonyRequest($request);
+
+        $items = $symfony->request->all('items');
+        self::assertSame('Widget', $items['details']['name']);
+
+        $attachments = $symfony->files->get('attachments');
+        self::assertIsArray($attachments);
+        self::assertCount(1, $attachments);
+        $file = $attachments[0];
+        self::assertInstanceOf(UploadedFile::class, $file);
+        self::assertSame('café.txt', $file->getClientOriginalName());
+        self::assertSame('text/plain', $file->getClientMimeType());
+        self::assertSame(rtrim($binary, "\r\n"), file_get_contents($file->getRealPath()));
     }
 }

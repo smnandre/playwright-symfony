@@ -14,11 +14,17 @@ use Playwright\Browser\BrowserContextInterface;
 use Playwright\Browser\BrowserType;
 use Playwright\Configuration\PlaywrightConfig;
 use Playwright\Playwright;
+use Playwright\Symfony\Asset\AssetMapperProxy;
+use Playwright\Symfony\Asset\FilesystemProxy;
+use Playwright\Symfony\BrowserKit\PlaywrightBrowser as BrowserKitClient;
+use Playwright\Symfony\Client\Interception\AssetServer;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Extension\Extension;
 use Symfony\Component\DependencyInjection\Loader\PhpFileLoader;
+use Symfony\Component\DependencyInjection\Parameter;
 use Symfony\Component\DependencyInjection\Reference;
 
 /**
@@ -42,9 +48,41 @@ final class PlaywrightExtension extends Extension
         $container->setParameter('playwright.debug', $config['debug']);
         $container->setParameter('playwright.playwright_path', $config['playwright_path']);
         $container->setParameter('playwright.node_path', $config['node_path']);
+        $container->setParameter('playwright.base_url', $config['base_url']);
+        $container->setParameter('playwright.debug_logging', $config['debug_logging']);
+        $assetConfig = $config['assets'] ?? [];
+        $container->setParameter('playwright.asset_prefixes', $assetConfig['prefixes'] ?? ['/assets', '/build', '/_framework/ux']);
+        $container->setParameter('playwright.asset_public_roots', $assetConfig['public_roots'] ?? ['%kernel.project_dir%/public']);
+        $container->setParameter('playwright.asset_dev_no_cache', $assetConfig['disable_cache'] ?? true);
+
+        $container->register(FilesystemProxy::class, FilesystemProxy::class)
+            ->setArgument('$publicRoots', new Parameter('playwright.asset_public_roots'))
+            ->setPublic(false);
+
+        $container->register(AssetMapperProxy::class, AssetMapperProxy::class)
+            ->setArgument('$assetMapper', new Reference('asset_mapper', ContainerInterface::NULL_ON_INVALID_REFERENCE))
+            ->setPublic(false);
+
+        $container->register(AssetServer::class, AssetServer::class)
+            ->setArguments([
+                [
+                    new Reference(AssetMapperProxy::class),
+                    new Reference(FilesystemProxy::class),
+                ],
+                new Parameter('playwright.asset_prefixes'),
+                new Parameter('playwright.asset_dev_no_cache'),
+            ])
+            ->setPublic(true);
 
         // Register Playwright browsers (default + named)
         $this->registerBrowsers($container, $config['browsers'] ?? [], $config['default_browser'] ?? 'default');
+
+        $container->register(BrowserKitClient::class, BrowserKitClient::class)
+            ->setFactory([BrowserKitClient::class, 'fromContext'])
+            ->setArguments([
+                new Reference(BrowserContextInterface::class),
+            ])
+            ->setPublic(true);
     }
 
     public function getAlias(): string
@@ -161,7 +199,7 @@ final class PlaywrightExtension extends Extension
 
         return match ($browserType) {
             'firefox' => Playwright::firefox($launchOptions),
-            'webkit' => Playwright::safari($launchOptions),
+            'webkit' => Playwright::webkit($launchOptions),
             default => Playwright::chromium($launchOptions),
         };
     }

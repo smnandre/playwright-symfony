@@ -15,7 +15,10 @@ use Playwright\Symfony\Browser\PlaywrightBrowser;
 use Playwright\Symfony\Client\PlaywrightClient;
 use Playwright\Symfony\Client\RequestConverter;
 use Playwright\Symfony\Client\ResponseConverter;
+use Playwright\Symfony\Client\Interception\AssetServer;
 use Playwright\Symfony\Test\Assert\PlaywrightTestAssertionsTrait;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\HttpFoundation\Request as SymfonyRequest;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
@@ -31,16 +34,40 @@ abstract class PlaywrightTestCase extends KernelTestCase
 
     protected PlaywrightBrowser $browser;
     protected PlaywrightClient $client;
+    protected string $baseUrl = 'http://localhost';
+    protected LoggerInterface $playwrightLogger;
+    protected bool $debugLogging = false;
 
     protected function setUp(): void
     {
+        $this->playwrightLogger = new NullLogger();
+        $this->debugLogging = false;
+
+        // Skip E2E browser tests unless explicitly enabled
+        if (getenv('PLAYWRIGHT_E2E') !== '1') {
+            $this->markTestSkipped('Playwright E2E tests are disabled. Set PLAYWRIGHT_E2E=1 to enable.');
+        }
+
         parent::setUp();
         self::bootKernel();
+
+        $this->baseUrl = $this->resolveBaseUrl();
+        $this->debugLogging = $this->resolveDebugLogging();
+        $this->playwrightLogger = $this->resolveLogger();
 
         $this->browser = PlaywrightBrowser::fromEnvironment();
         $this->browser->start();
 
+        if ($this->debugLogging) {
+            $this->playwrightLogger->info('Started Playwright browser', [
+                'browser' => $this->browser->getBrowserType(),
+                'headless' => $this->browser->isHeadless(),
+            ]);
+        }
+
         $interceptedHosts = $this->loadInterceptedHosts();
+
+        $assetServer = $this->resolveAssetServer();
 
         $this->client = new PlaywrightClient(
             $this->browser,
@@ -49,14 +76,25 @@ abstract class PlaywrightTestCase extends KernelTestCase
             new ResponseConverter(),
             [],
             $interceptedHosts,
-            $this
+            $this,
+            $assetServer,
+            $this->baseUrl,
+            $this->playwrightLogger,
+            $this->debugLogging,
         );
     }
 
     protected function tearDown(): void
     {
         try {
-            $this->browser->stop();
+            if (isset($this->browser)) {
+                if ($this->debugLogging) {
+                    $this->playwrightLogger->info('Stopping Playwright browser', [
+                        'browser' => $this->browser->getBrowserType(),
+                    ]);
+                }
+                $this->browser->stop();
+            }
         } catch (\Throwable $e) {
             // Ignore browser stop errors during teardown
         }
@@ -68,24 +106,30 @@ abstract class PlaywrightTestCase extends KernelTestCase
     private function restoreExceptionHandlers(): void
     {
         try {
-            // Restore all exception handlers that may have been set during test execution
-            $maxIterations = 10; // Prevent infinite loops
+            // Symfony's ErrorHandler and PHPUnit can push multiple exception handlers onto the stack.
+            // A single `restore_exception_handler()` call only removes the topmost one.
+            // This loop ensures all handlers pushed during test execution are popped off,
+            // preventing interference with subsequent tests or other Symfony components.
+            $maxIterations = 10; // Safeguard to prevent infinite loops if an unexpected handler persists
             $iterations = 0;
 
             while ($iterations < $maxIterations) {
+                // Push a no-op handler to get the previous one without triggering an error
                 $previousHandler = set_exception_handler(static fn () => null);
-                restore_exception_handler();
+                restore_exception_handler(); // Remove the no-op handler
 
                 if (null === $previousHandler) {
+                    // No more custom handlers, only PHP's default is left
                     break;
                 }
 
+                // Remove the previously found custom handler
                 restore_exception_handler();
                 ++$iterations;
             }
         } catch (\Throwable $e) {
-            // If exception handler restoration fails, continue with teardown
-            // This prevents test failures due to exception handler cleanup issues
+            // If exception handler restoration fails, continue with teardown.
+            // This prevents test failures due to issues in handler cleanup itself.
         }
     }
 
@@ -152,7 +196,7 @@ abstract class PlaywrightTestCase extends KernelTestCase
 
     public function getBaseUrl(): string
     {
-        return 'http://localhost';
+        return $this->baseUrl;
     }
 
     // Hooks for customization
@@ -171,6 +215,89 @@ abstract class PlaywrightTestCase extends KernelTestCase
         // Override to load fixtures
     }
 
+    private function resolveLogger(): LoggerInterface
+    {
+        $container = self::$kernel->getContainer();
+
+        $logger = $this->findLoggerInContainer($container);
+        if (null !== $logger) {
+            return $logger;
+        }
+
+        if ($container->has('test.service_container')) {
+            /** @var \Symfony\Component\DependencyInjection\ContainerInterface $testContainer */
+            $testContainer = $container->get('test.service_container');
+            $logger = $this->findLoggerInContainer($testContainer);
+            if (null !== $logger) {
+                return $logger;
+            }
+        }
+
+        return new NullLogger();
+    }
+
+    private function findLoggerInContainer(object $container): ?LoggerInterface
+    {
+        if (method_exists($container, 'has') && $container->has('monolog.logger.playwright')) {
+            $candidate = $container->get('monolog.logger.playwright');
+            if ($candidate instanceof LoggerInterface) {
+                return $candidate;
+            }
+        }
+
+        if (method_exists($container, 'has') && $container->has('logger')) {
+            $candidate = $container->get('logger');
+            if ($candidate instanceof LoggerInterface) {
+                return $candidate;
+            }
+        }
+
+        return null;
+    }
+
+    private function resolveDebugLogging(): bool
+    {
+        $env = getenv('PLAYWRIGHT_VERBOSE');
+        if (false !== $env && '' !== $env) {
+            return !in_array(strtolower((string) $env), ['0', 'false', 'off'], true);
+        }
+
+        $container = self::$kernel->getContainer();
+        if ($container->hasParameter('playwright.debug_logging')) {
+            return (bool) $container->getParameter('playwright.debug_logging');
+        }
+
+        if ($container->has('test.service_container')) {
+            /** @var \Symfony\Component\DependencyInjection\ContainerInterface $testContainer */
+            $testContainer = $container->get('test.service_container');
+            if ($testContainer->hasParameter('playwright.debug_logging')) {
+                return (bool) $testContainer->getParameter('playwright.debug_logging');
+            }
+        }
+
+        return false;
+    }
+
+    private function resolveBaseUrl(): string
+    {
+        $default = 'http://localhost';
+        $container = self::$kernel->getContainer();
+
+        if ($container->hasParameter('playwright.base_url')) {
+            return (string) $container->getParameter('playwright.base_url');
+        }
+
+        if ($container->has('test.service_container')) {
+            /** @var \Symfony\Component\DependencyInjection\ContainerInterface $testContainer */
+            $testContainer = $container->get('test.service_container');
+            if ($testContainer->hasParameter('playwright.base_url')) {
+                return (string) $testContainer->getParameter('playwright.base_url');
+            }
+        }
+
+        return $default;
+    }
+
     private function loadInterceptedHosts(): array
     {
         $container = self::$kernel->getContainer();
@@ -183,5 +310,24 @@ abstract class PlaywrightTestCase extends KernelTestCase
         }
 
         return $defaultHosts;
+    }
+
+    private function resolveAssetServer(): ?AssetServer
+    {
+        $container = self::$kernel->getContainer();
+
+        if ($container->has(AssetServer::class)) {
+            return $container->get(AssetServer::class);
+        }
+
+        if ($container->has('test.service_container')) {
+            /** @var \Symfony\Component\DependencyInjection\ContainerInterface $testContainer */
+            $testContainer = $container->get('test.service_container');
+            if ($testContainer->has(AssetServer::class)) {
+                return $testContainer->get(AssetServer::class);
+            }
+        }
+
+        return null;
     }
 }

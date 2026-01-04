@@ -8,9 +8,9 @@ declare(strict_types=1);
  * the LICENSE file that was distributed with this source code.
  */
 
-namespace PlaywrightPHP\Symfony\Tests\Client\Fixtures;
+namespace Playwright\Symfony\Tests\Client\Fixtures;
 
-use PlaywrightPHP\Network\RequestInterface;
+use Playwright\Network\RequestInterface;
 
 class FakeRoute
 {

@@ -10,7 +10,9 @@ declare(strict_types=1);
 
 namespace Playwright\Symfony\Tests\Fixtures;
 
+use Playwright\Frame\FrameInterface;
 use Playwright\Network\RequestInterface;
+use Playwright\Network\ResponseInterface;
 
 /**
  * Mock implementation of RequestInterface for testing purposes.
@@ -42,10 +44,19 @@ final readonly class MockRequest implements RequestInterface
 
     /**
      * Returns the request headers as an associative array.
+     *
+     * @return array<string, string>
      */
     public function headers(): array
     {
-        return $this->headers;
+        $result = [];
+        foreach ($this->headers as $k => $v) {
+            if (is_string($k) && (is_string($v) || is_numeric($v))) {
+                $result[$k] = (string) $v;
+            }
+        }
+
+        return $result;
     }
 
     public function postData(): ?string
@@ -62,15 +73,128 @@ final readonly class MockRequest implements RequestInterface
             return null;
         }
 
-        if (!json_validate($this->postData)) {
+        if (function_exists('json_validate') && !json_validate($this->postData)) {
             return null;
         }
 
-        return json_decode($this->postData, true, 512, JSON_THROW_ON_ERROR);
+        try {
+            $decoded = json_decode($this->postData, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return null;
+        }
+
+        return is_array($decoded) ? $decoded : null;
     }
 
     public function resourceType(): string
     {
         return $this->resourceType;
+    }
+
+    public function headerValue(string $name): ?string
+    {
+        $headers = $this->headers();
+        $lower = strtolower($name);
+        foreach ($headers as $k => $v) {
+            if (strtolower($k) !== $lower) {
+                continue;
+            }
+            $parts = array_map('trim', explode(',', $v));
+            foreach ($parts as $part) {
+                if ($part !== '') {
+                    return $part;
+                }
+            }
+
+            return '';
+        }
+
+        return null;
+    }
+
+    public function headersArray(): array
+    {
+        $out = [];
+        foreach ($this->headers() as $name => $value) {
+            $parts = array_map('trim', explode(',', $value));
+            foreach ($parts as $part) {
+                if ('' === $part) {
+                    continue;
+                }
+                $out[] = ['name' => $name, 'value' => $part];
+            }
+        }
+
+        return $out;
+    }
+
+    public function allHeaders(): array
+    {
+        return $this->headers();
+    }
+
+    public function isNavigationRequest(): bool
+    {
+        return false;
+    }
+
+    public function postDataBuffer(): ?string
+    {
+        return $this->postData;
+    }
+
+    public function failure(): ?array
+    {
+        return null;
+    }
+
+    public function frame(): ?FrameInterface
+    {
+        return null;
+    }
+
+    public function redirectedFrom(): ?self
+    {
+        return null;
+    }
+
+    public function redirectedTo(): ?self
+    {
+        return null;
+    }
+
+    public function response(): ?ResponseInterface
+    {
+        return null;
+    }
+
+    public function serviceWorker(): mixed
+    {
+        return null;
+    }
+
+    public function sizes(): array
+    {
+        return [
+            'requestBodySize' => 0,
+            'requestHeadersSize' => 0,
+            'responseBodySize' => 0,
+            'responseHeadersSize' => 0,
+        ];
+    }
+
+    public function timing(): array
+    {
+        return [
+            'startTime' => -1.0,
+            'domainLookupStart' => -1.0,
+            'domainLookupEnd' => -1.0,
+            'connectStart' => -1.0,
+            'secureConnectionStart' => -1.0,
+            'connectEnd' => -1.0,
+            'requestStart' => -1.0,
+            'responseStart' => -1.0,
+            'responseEnd' => -1.0,
+        ];
     }
 }

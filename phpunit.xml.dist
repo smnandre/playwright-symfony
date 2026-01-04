@@ -21,5 +21,9 @@
             <directory>src</directory>
         </include>
     </source>
-    
+
+    <php>
+        <env name="PLAYWRIGHT_BASE_URL" value="http://localhost"/>
+    </php>
+
 </phpunit>

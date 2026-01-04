@@ -8,10 +8,11 @@ declare(strict_types=1);
  * the LICENSE file that was distributed with this source code.
  */
 
-namespace PlaywrightPHP\Symfony\Client;
+namespace Playwright\Symfony\Client;
 
-use PlaywrightPHP\Network\RequestInterface;
+use Playwright\Network\RequestInterface;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Symfony\Component\HttpFoundation\HeaderUtils;
 use Symfony\Component\HttpFoundation\Request as SymfonyRequest;
 
 /**
@@ -107,51 +108,105 @@ class RequestConverter
 
     private function parseMultipartFormData(string $contentType, string $body, array &$parameters, array &$files): void
     {
-        if (!preg_match('/boundary=(.+)$/i', $contentType, $matches)) {
-            return;
-        }
-
-        $boundary = trim($matches[1], "\"\' ");
-        if ('' === $boundary) {
+        $boundary = $this->extractBoundary($contentType);
+        if (null === $boundary) {
             return;
         }
 
         $delimiter = '--'.$boundary;
-        $parts = preg_split('/(?:^|\r?\n)'.preg_quote($delimiter, '/').'/', $body);
+        $sections = explode($delimiter, $body);
 
-        if (false === $parts) {
-            return;
-        }
-
-        foreach ($parts as $part) {
-            $part = ltrim($part, "\r\n");
-            if ('' === trim($part) || str_starts_with($part, '--')) {
+        foreach ($sections as $section) {
+            $section = ltrim($section, "\r\n");
+            if ('' === $section) {
                 continue;
             }
 
-            $segments = preg_split("/\r?\n\r?\n/", $part, 2);
-            if (!is_array($segments) || 2 !== count($segments)) {
+            $trimmed = trim($section);
+            if ('--' === $trimmed) {
+                // closing boundary
                 continue;
             }
 
-            [$rawHeaders, $content] = $segments;
+            $headerEnd = strpos($section, "\r\n\r\n");
+            if (false === $headerEnd) {
+                continue;
+            }
+
+            $rawHeaders = substr($section, 0, $headerEnd);
+            $partBody = substr($section, $headerEnd + 4);
+            if (false === $partBody) {
+                continue;
+            }
+
             $headers = $this->parsePartHeaders($rawHeaders);
-
-            $contentDisposition = $headers['content-disposition'] ?? '';
-            if (!preg_match('/form-data;\s*name="([^"]+)"(?:;\s*filename="([^"]*)")?/i', $contentDisposition, $matches)) {
+            $disposition = $headers['content-disposition'] ?? null;
+            if (null === $disposition) {
                 continue;
             }
 
-            $name = $matches[1];
-            $filename = $matches[2] ?? null;
-            $content = rtrim($content, "\r\n");
+            $dispositionParts = $this->parseContentDisposition($disposition);
+            $fieldName = $dispositionParts['name'] ?? null;
+            if (!\is_string($fieldName) || '' === $fieldName) {
+                continue;
+            }
 
-            if ('' === (string) $filename) {
-                $parameters[$name] = $content;
-            } else {
-                $this->createUploadedFile($name, $filename, $content, $headers, $files);
+            $filename = $dispositionParts['filename'] ?? $dispositionParts['filename*'] ?? null;
+            if (\is_string($filename) && str_contains($filename, "''")) {
+                [$charset, $encoded] = explode("''", $filename, 2) + [null, null];
+                $filename = null !== $encoded ? rawurldecode($encoded) : $filename;
+            }
+
+            $payload = rtrim($partBody, "\r\n");
+
+            if (null !== $filename && '' !== $filename) {
+                $this->createUploadedFile($fieldName, $filename, $payload, $headers, $files);
+
+                continue;
+            }
+
+            $this->setArrayByPath($parameters, $fieldName, $payload);
+        }
+    }
+
+    private function extractBoundary(string $contentType): ?string
+    {
+        $parts = HeaderUtils::split($contentType, ';=');
+        if (empty($parts)) {
+            return null;
+        }
+
+        array_shift($parts); // remove mime type
+        $assoc = HeaderUtils::combine($parts);
+        $boundary = $assoc['boundary'] ?? null;
+        if (!\is_string($boundary) || '' === $boundary) {
+            return null;
+        }
+
+        return HeaderUtils::unquote($boundary);
+    }
+
+    private function parseContentDisposition(string $header): array
+    {
+        $parts = HeaderUtils::split($header, ';=');
+        if (empty($parts)) {
+            return [];
+        }
+
+        $typePart = array_shift($parts);
+        $assoc = HeaderUtils::combine($parts);
+
+        foreach ($assoc as $key => $value) {
+            if (\is_string($value)) {
+                $assoc[$key] = HeaderUtils::unquote($value);
             }
         }
+
+        if (!empty($typePart)) {
+            $assoc['type'] = strtolower($typePart[0]);
+        }
+
+        return $assoc;
     }
 
     private function parsePartHeaders(string $rawHeaders): array

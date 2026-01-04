@@ -1,5 +1,6 @@
 /var/
 /vendor/
+/tests/Fixtures/App/var
 /.phpunit.cache
 /.php-cs-fixer.cache
 /coverage.xml

@@ -8,18 +8,19 @@ declare(strict_types=1);
  * the LICENSE file that was distributed with this source code.
  */
 
-namespace PlaywrightPHP\Symfony\Tests\Client\Fixtures;
+namespace Playwright\Symfony\Tests\Client\Fixtures;
 
-use PlaywrightPHP\Browser\BrowserContextInterface;
-use PlaywrightPHP\Frame\FrameInterface;
-use PlaywrightPHP\Frame\FrameLocatorInterface;
-use PlaywrightPHP\Input\KeyboardInterface;
-use PlaywrightPHP\Input\MouseInterface;
-use PlaywrightPHP\Locator\LocatorInterface;
-use PlaywrightPHP\Network\RequestInterface;
-use PlaywrightPHP\Network\ResponseInterface;
-use PlaywrightPHP\Page\PageEventHandlerInterface;
-use PlaywrightPHP\Page\PageInterface;
+use Playwright\API\APIRequestContextInterface;
+use Playwright\Browser\BrowserContextInterface;
+use Playwright\Frame\FrameInterface;
+use Playwright\Frame\FrameLocatorInterface;
+use Playwright\Input\KeyboardInterface;
+use Playwright\Input\MouseInterface;
+use Playwright\Locator\LocatorInterface;
+use Playwright\Network\RequestInterface;
+use Playwright\Network\ResponseInterface;
+use Playwright\Page\PageEventHandlerInterface;
+use Playwright\Page\PageInterface;
 
 class FakePage implements PageInterface
 {
@@ -53,7 +54,7 @@ class FakePage implements PageInterface
         return $route;
     }
 
-    public function locator(string $selector): LocatorInterface
+    public function locator(string $selector, \Playwright\Locator\Options\LocatorOptions|array $options = []): LocatorInterface
     {
         return new class implements LocatorInterface {
             public function __call($n, $a)
@@ -99,6 +100,11 @@ class FakePage implements PageInterface
     }
 
     public function evaluate(string $expression, mixed $arg = null): mixed
+    {
+        return null;
+    }
+
+    public function evaluateHandle(string $expression, mixed $arg = null): mixed
     {
         return null;
     }
@@ -175,6 +181,10 @@ class FakePage implements PageInterface
     public function waitForURL($url, array $options = []): PageInterface
     {
         return $this;
+    }
+
+    public function once(string $event, callable $handler): void
+    {
     }
 
     public function addScriptTag(array $options): PageInterface
@@ -268,5 +278,65 @@ class FakePage implements PageInterface
     public function frame(array $options): ?FrameInterface
     {
         return null;
+    }
+
+    public function getByAltText(string $text, array $options = []): LocatorInterface
+    {
+        // TODO: Implement getByAltText() method.
+    }
+
+    public function getByLabel(string $text, array $options = []): LocatorInterface
+    {
+        // TODO: Implement getByLabel() method.
+    }
+
+    public function getByPlaceholder(string $text, array $options = []): LocatorInterface
+    {
+        // TODO: Implement getByPlaceholder() method.
+    }
+
+    public function getByRole(string $role, array $options = []): LocatorInterface
+    {
+        // TODO: Implement getByRole() method.
+    }
+
+    public function getByTestId(string $testId): LocatorInterface
+    {
+        // TODO: Implement getByTestId() method.
+    }
+
+    public function getByText(string $text, array $options = []): LocatorInterface
+    {
+        // TODO: Implement getByText() method.
+    }
+
+    public function getByTitle(string $text, array $options = []): LocatorInterface
+    {
+        // TODO: Implement getByTitle() method.
+    }
+
+    public function isClosed(): bool
+    {
+        // TODO: Implement isClosed() method.
+    }
+
+    public function setDefaultNavigationTimeout(int $timeout): PageInterface
+    {
+        // TODO: Implement setDefaultNavigationTimeout() method.
+    }
+
+    public function setDefaultTimeout(int $timeout): PageInterface
+    {
+        // TODO: Implement setDefaultTimeout() method.
+    }
+
+    public function waitForPopup(callable $action, array $options = []): PageInterface
+    {
+        // TODO: Implement waitForPopup() method.
+    }
+
+    public function request(): APIRequestContextInterface
+    {
+        // TODO: Implement request() method.
     }
 }

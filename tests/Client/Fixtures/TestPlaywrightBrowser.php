@@ -8,11 +8,11 @@ declare(strict_types=1);
  * the LICENSE file that was distributed with this source code.
  */
 
-namespace PlaywrightPHP\Symfony\Tests\Client\Fixtures;
+namespace Playwright\Symfony\Tests\Client\Fixtures;
 
-use PlaywrightPHP\Browser\BrowserContextInterface;
-use PlaywrightPHP\Page\PageInterface;
-use PlaywrightPHP\Symfony\Browser\PlaywrightBrowser;
+use Playwright\Browser\BrowserContextInterface;
+use Playwright\Page\PageInterface;
+use Playwright\Symfony\Browser\PlaywrightBrowser;
 
 class TestPlaywrightBrowser extends PlaywrightBrowser
 {

@@ -1,0 +1,57 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Playwright\Symfony\BrowserKit;
+
+use Playwright\Browser\BrowserContextInterface;
+use Symfony\Component\BrowserKit\Cookie;
+use Symfony\Component\BrowserKit\CookieJar;
+
+final class CookieJarSync
+{
+    public static function fromContext(CookieJar $jar, BrowserContextInterface $context): void
+    {
+        foreach ($context->cookies() as $cookie) {
+            $jar->set(new Cookie(
+                name: (string) $cookie['name'],
+                value: (string) ($cookie['value'] ?? ''),
+                expires: isset($cookie['expires']) ? (int) $cookie['expires'] : null,
+                path: (string) ($cookie['path'] ?? '/'),
+                domain: (string) ($cookie['domain'] ?? ''),
+                secure: (bool) ($cookie['secure'] ?? false),
+                httponly: (bool) ($cookie['httpOnly'] ?? false)
+            ));
+        }
+    }
+
+    public static function toJarFromUrl(CookieJar $jar, BrowserContextInterface $context, string $url): void
+    {
+        foreach ($context->cookies() as $cookie) {
+            $jar->set(new Cookie(
+                name: (string) $cookie['name'],
+                value: (string) ($cookie['value'] ?? ''),
+                expires: isset($cookie['expires']) ? (int) $cookie['expires'] : null,
+                path: (string) ($cookie['path'] ?? '/'),
+                domain: (string) ($cookie['domain'] ?? ''),
+                secure: (bool) ($cookie['secure'] ?? false),
+                httponly: (bool) ($cookie['httpOnly'] ?? false)
+            ));
+        }
+    }
+
+    public static function applyJarToContext(CookieJar $jar, BrowserContextInterface $context, string $url): void
+    {
+        $cookies = [];
+        foreach ($jar->allValues($url) as $name => $value) {
+            $cookies[] = [
+                'name' => $name,
+                'value' => $value,
+            ];
+        }
+
+        if (!empty($cookies)) {
+            $context->addCookies($cookies);
+        }
+    }
+}

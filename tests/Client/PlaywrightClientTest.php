@@ -8,24 +8,32 @@ declare(strict_types=1);
  * the LICENSE file that was distributed with this source code.
  */
 
-namespace PlaywrightPHP\Symfony\Tests\Client;
+namespace Playwright\Symfony\Tests\Client;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
-use PlaywrightPHP\Symfony\Client\PlaywrightClient;
-use PlaywrightPHP\Symfony\Client\RequestConverter;
-use PlaywrightPHP\Symfony\Client\ResponseConverter;
-use PlaywrightPHP\Symfony\Tests\Client\Fixtures\FakeBrowserContext;
-use PlaywrightPHP\Symfony\Tests\Client\Fixtures\FakePage;
-use PlaywrightPHP\Symfony\Tests\Client\Fixtures\TestPlaywrightBrowser;
-use PlaywrightPHP\Symfony\Tests\Fixtures\MockRequest;
+use Playwright\Symfony\Browser\PlaywrightBrowser;
+use Playwright\Symfony\Client\PlaywrightClient;
+use Playwright\Symfony\Client\RequestConverter;
+use Playwright\Symfony\Client\ResponseConverter;
+use Playwright\Symfony\Tests\Client\Fixtures\FakeBrowserContext;
+use Playwright\Symfony\Tests\Client\Fixtures\FakeLogger;
+use Playwright\Symfony\Tests\Client\Fixtures\FakePage;
+use Playwright\Symfony\Tests\Client\Fixtures\TestPlaywrightBrowser;
+use Playwright\Symfony\Tests\Fixtures\MockRequest;
+use Playwright\Symfony\Client\Interception\AssetFile;
+use Playwright\Symfony\Client\Interception\AssetLocatorInterface;
+use Playwright\Symfony\Client\Interception\AssetServer;
 use Symfony\Component\HttpFoundation\Request as SymfonyRequest;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
 
 #[CoversClass(PlaywrightClient::class)]
+#[CoversClass(PlaywrightBrowser::class)]
 #[CoversClass(RequestConverter::class)]
 #[CoversClass(ResponseConverter::class)]
+#[CoversClass(AssetServer::class)]
+#[CoversClass(AssetFile::class)]
 class PlaywrightClientTest extends TestCase
 {
     private TestPlaywrightBrowser $browser;
@@ -57,6 +65,28 @@ class PlaywrightClientTest extends TestCase
 
         self::assertSame($this->page, $page);
         self::assertSame('http://localhost/hello', $this->page->lastGoto);
+    }
+
+    public function testVisitRespectsCustomBaseUrl(): void
+    {
+        $client = new PlaywrightClient(
+            $this->browser,
+            new class implements HttpKernelInterface {
+                public function handle(SymfonyRequest $request, int $type = self::MAIN_REQUEST, bool $catch = true): SymfonyResponse
+                {
+                    return new SymfonyResponse('ok');
+                }
+            },
+            new RequestConverter(),
+            new ResponseConverter(),
+            baseUrl: 'https://example.test'
+        );
+
+        $page = $client->visit('/greet');
+
+        self::assertSame($this->page, $page);
+        self::assertSame('https://example.test/greet', $this->page->lastGoto);
+        self::assertSame('https://example.test', $client->getBaseUrl());
     }
 
     public function testInterceptedRequestHandledThroughKernel(): void
@@ -139,6 +169,119 @@ class PlaywrightClientTest extends TestCase
 
         self::assertTrue($route->continued);
         self::assertFalse($route->fulfilled);
+    }
+
+    public function testAssetRequestServedByAssetServer(): void
+    {
+        $kernel = new class() implements HttpKernelInterface {
+            public bool $handled = false;
+
+            public function handle(SymfonyRequest $request, int $type = self::MAIN_REQUEST, bool $catch = true): SymfonyResponse
+            {
+                $this->handled = true;
+
+                return new SymfonyResponse('kernel');
+            }
+        };
+
+        $asset = new AssetFile(null, null, null, 'text/css', 'body { color: red; }');
+        $locator = new class($asset) implements AssetLocatorInterface {
+            public function __construct(private AssetFile $asset)
+            {
+            }
+
+            public function locate(string $requestPath): ?AssetFile
+            {
+                return str_contains($requestPath, '/assets/') ? $this->asset : null;
+            }
+        };
+
+        $assetServer = new AssetServer([$locator], ['/assets'], true);
+
+        $client = new PlaywrightClient(
+            $this->browser,
+            $kernel,
+            new RequestConverter(),
+            new ResponseConverter(),
+            [],
+            ['localhost'],
+            null,
+            $assetServer,
+        );
+
+        $client->visit('/start');
+
+        $mock = new MockRequest(url: 'http://localhost/assets/app.css', method: 'GET');
+        $route = $this->page->triggerRequest($mock);
+
+        self::assertTrue($route->fulfilled, 'Asset request should be fulfilled by asset server');
+        self::assertSame('text/css', $route->fulfilledOptions['contentType'] ?? null);
+        self::assertStringContainsString('color: red', base64_decode($route->fulfilledOptions['body'] ?? '', true) ?: ($route->fulfilledOptions['body'] ?? ''));
+        self::assertFalse($kernel->handled, 'Kernel should not handle requests served by the asset server');
+    }
+
+    public function testLogsInterceptedRequestsWhenDebugEnabled(): void
+    {
+        $logger = new FakeLogger();
+
+        $client = new PlaywrightClient(
+            $this->browser,
+            new class implements HttpKernelInterface {
+                public function handle(SymfonyRequest $request, int $type = self::MAIN_REQUEST, bool $catch = true): SymfonyResponse
+                {
+                    return new SymfonyResponse('logged');
+                }
+            },
+            new RequestConverter(),
+            new ResponseConverter(),
+            [],
+            ['localhost'],
+            null,
+            null,
+            'http://localhost',
+            $logger,
+            true,
+        );
+
+        $client->visit('/logged');
+        $mock = new MockRequest(url: 'http://localhost/logged', method: 'GET');
+        $this->page->triggerRequest($mock);
+
+        self::assertTrue($logger->hasRecord('info', static function (array $context, string $message): bool {
+            return ($context['uri'] ?? null) === 'http://localhost/logged'
+                && ($context['status_code'] ?? null) === 200
+                && $message === 'Fulfilled intercepted request';
+        }));
+    }
+
+    public function testDoesNotLogWhenDebugDisabled(): void
+    {
+        $logger = new FakeLogger();
+
+        $client = new PlaywrightClient(
+            $this->browser,
+            new class implements HttpKernelInterface {
+                public function handle(SymfonyRequest $request, int $type = self::MAIN_REQUEST, bool $catch = true): SymfonyResponse
+                {
+                    return new SymfonyResponse('logged');
+                }
+            },
+            new RequestConverter(),
+            new ResponseConverter(),
+            [],
+            ['localhost'],
+            null,
+            null,
+            'http://localhost',
+            $logger,
+            false,
+        );
+
+        $client->visit('/logged');
+        $mock = new MockRequest(url: 'http://localhost/logged', method: 'GET');
+        $this->page->triggerRequest($mock);
+
+        self::assertFalse($logger->hasRecord('info'));
     }
 
     public function testCookieHelpersWorkWithContext(): void

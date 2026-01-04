@@ -14,8 +14,6 @@ use Playwright\Network\RequestInterface;
 use Playwright\Symfony\Client\RequestConverter;
 use Playwright\Symfony\Client\ResponseConverter;
 use Playwright\Symfony\Test\PlaywrightTestCase;
-use Playwright\Network\RequestInterface;
-use Playwright\Symfony\Test\PlaywrightTestCase;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Request as SymfonyRequest;
 use Symfony\Component\HttpFoundation\Response;

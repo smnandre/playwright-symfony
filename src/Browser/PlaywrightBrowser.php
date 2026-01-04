@@ -8,11 +8,11 @@ declare(strict_types=1);
  * the LICENSE file that was distributed with this source code.
  */
 
-namespace PlaywrightPHP\Symfony\Browser;
+namespace Playwright\Symfony\Browser;
 
-use PlaywrightPHP\Browser\BrowserContextInterface;
-use PlaywrightPHP\Page\PageInterface;
-use PlaywrightPHP\Playwright;
+use Playwright\Browser\BrowserContextInterface;
+use Playwright\Page\PageInterface;
+use Playwright\Playwright;
 
 /**
  * Handles Playwright browser lifecycle and configuration.

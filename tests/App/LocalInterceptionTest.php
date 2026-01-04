@@ -81,4 +81,37 @@ final class LocalInterceptionTest extends TestCase
 
         $kernel->shutdown();
     }
+
+    #[RunInSeparateProcess]
+    public function testAssetMapperDevServerServesCss(): void
+    {
+        $kernel = new TestKernel('test', false);
+        $kernel->boot();
+
+        $assetUrl = $kernel->getContainer()->get('test.service_container')->get('assets.packages')->getUrl('styles/app.css');
+
+        $request = Request::create('http://localhost'.$assetUrl, 'GET');
+        $response = $kernel->handle($request);
+
+        $this->assertSame(200, $response->getStatusCode());
+        $this->assertSame('text/css', $response->headers->get('content-type'));
+        $content = $response->getContent();
+        if (false === $content) {
+            $level = ob_get_level();
+            ob_start();
+            try {
+                $response->sendContent();
+                $content = ob_get_contents() ?: '';
+            } finally {
+                while (ob_get_level() > $level) {
+                    ob_end_clean();
+                }
+            }
+        }
+        $this->assertIsString($content);
+        $this->assertStringContainsString('.styled-box', $content);
+        $this->assertStringContainsString('#3498db', $content);
+
+        $kernel->shutdown();
+    }
 }

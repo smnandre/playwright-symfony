@@ -8,17 +8,20 @@ declare(strict_types=1);
  * the LICENSE file that was distributed with this source code.
  */
 
-namespace PlaywrightPHP\Symfony\Tests\Client\Fixtures;
+namespace Playwright\Symfony\Tests\Client\Fixtures;
 
-use PlaywrightPHP\Browser\BrowserContextInterface;
-use PlaywrightPHP\Browser\StorageState;
-use PlaywrightPHP\Network\NetworkThrottling;
-use PlaywrightPHP\Page\PageInterface;
+use Playwright\API\APIRequestContextInterface;
+use Playwright\Browser\BrowserContextInterface;
+use Playwright\Browser\StorageState;
+use Playwright\Network\NetworkThrottling;
+use Playwright\Page\PageInterface;
 
 class FakeBrowserContext implements BrowserContextInterface
 {
     /** @var array<int, array<string, mixed>> */
     public array $cookies = [];
+    public array $extraHTTPHeaders = [];
+    public ?array $httpCredentials = null;
     /** @var array<int, PageInterface> */
     private array $pages = [];
     private ?string $envValue = null;
@@ -66,6 +69,16 @@ class FakeBrowserContext implements BrowserContextInterface
 
     public function grantPermissions(array $permissions): void
     {
+    }
+
+    public function setExtraHTTPHeaders(array $headers): void
+    {
+        $this->extraHTTPHeaders = $headers;
+    }
+
+    public function setHttpCredentials(array $credentials): void
+    {
+        $this->httpCredentials = $credentials;
     }
 
     public function newPage(array $options = []): PageInterface
@@ -131,4 +144,27 @@ class FakeBrowserContext implements BrowserContextInterface
     public function disableNetworkThrottling(): void
     {
     }
+    public function deleteCookie(string $name): void
+    {
+        $this->cookies = array_values(array_filter(
+            $this->cookies,
+            static fn ($cookie) => ($cookie['name'] ?? null) !== $name
+        ));
+    }
+
+    public function waitForEvent(string $event, ?callable $predicate = null, ?int $timeout = null): array
+    {
+        return [];
+    }
+
+    public function waitForPopup(callable $action, array $options = []): PageInterface
+    {
+        return $this->newPage();
+    }
+
+    public function request(): APIRequestContextInterface
+    {
+        throw new \BadMethodCallException('Not implemented in fake context.');
+    }
+
 }

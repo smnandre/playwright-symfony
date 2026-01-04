@@ -22,9 +22,4 @@ SOFTWARE.
 
 ---
 
-Third-Party Notice
-
-This project depends on Playwright, an open-source project by Microsoft,
-licensed under Apache License 2.0 (https://github.com/microsoft/playwright/blob/main/LICENSE).
-"Playwright" is a trademark of Microsoft. This project is independent and not
-affiliated with or endorsed by Microsoft.
+See NOTICE file for additional details.
