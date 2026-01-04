@@ -199,25 +199,33 @@
   - Test session data available in controller
 
 ### 3.3 Request/Response Inspection
-- [ ] **Inspect intercepted requests**
-  - Test `getLastRequest()` returns Symfony Request object
-  - Verify headers, body, query params accessible
-  - Test multiple requests tracked correctly
+- [x] **Inspect intercepted requests** ✅ **COMPLETED** (5 tests)
+  - ✅ Test `getLastRequest()` returns Symfony Request object
+  - ✅ Verify headers accessible
+  - ✅ Verify query params accessible
+  - ✅ Verify POST data accessible
+  - ✅ Test multiple requests tracked correctly
 
-- [ ] **Inspect responses**
-  - Test `getLastResponse()` returns Symfony Response
-  - Verify status code, headers, body content
-  - Test response headers in assertions
+- [x] **Inspect responses** ✅ **COMPLETED** (5 tests)
+  - ✅ Test `getLastResponse()` returns Symfony Response
+  - ✅ Verify status code accessible
+  - ✅ Verify headers accessible
+  - ✅ Verify body content accessible
+  - ✅ Test request/response linking
+
+**RequestResponseInspectionE2ETest.php: 10 tests, 28 assertions, 0 failures** 🎉
 
 ### 3.4 BrowserKit Bridge
-- [ ] **PlaywrightBrowser compatibility**
-  - Verify BrowserKit tests can use `$client->request()` (or documented limitation)
-  - Test crawler operations (if supported)
-  - Document which BrowserKit methods work vs don't work
+- [x] **PlaywrightBrowser compatibility** ✅ VERIFIED
+  - ✅ BrowserKit tests can use `$client->request()` - WORKING
+  - ✅ Crawler operations supported - Returns Crawler for DOM traversal
+  - ✅ All key methods documented: request(), click(), submit()
+  - ✅ Test passing: PlaywrightBrowserTest (1 test, 4 assertions)
 
-- [ ] **Add BrowserKit test example**
-  - Show how to use `PlaywrightBrowser` from DI container
-  - Demonstrate DomCrawler usage if applicable
+- [x] **Add BrowserKit test example** ✅ EXISTS
+  - ✅ Example in tests/BrowserKit/PlaywrightBrowserTest.php
+  - ✅ Shows usage from context: `PlaywrightBrowser::fromContext()`
+  - ✅ Demonstrates DomCrawler, cookies, server params
 
 ---
 
@@ -449,10 +457,17 @@ RELEASE:
 
 ---
 
-**Last Updated:** 2026-01-04 19:00 CET
-**Status:** Phase 1 + Phase 4 Complete - Ready for v0.1.0 release decision
+**Last Updated:** 2026-01-04 19:15 CET
+**Status:** Phase 1 + Phase 3.3 + Phase 4 Complete - Ready for v0.1.0 release decision
 
 ## ✅ Recent Completions (2026-01-04)
+
+### Phase 3.3: Request/Response Inspection - COMPLETED ✅ (19:15)
+- **Added 10 comprehensive inspection tests** verifying request/response access
+  - Request inspection: 5 tests (Request object, headers, query params, POST data, tracking)
+  - Response inspection: 5 tests (Response object, status codes, headers, content, linking)
+- **Test Results**: 10 tests, 28 assertions, 0 failures
+- **Perfect execution**: All tests passed on first attempt! 🎯
 
 ### Phase 4.1: E2E Tests - COMPLETED ✅ (19:00)
 - **Added 13 comprehensive E2E tests** covering critical user flows
