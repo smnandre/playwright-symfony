@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Profile</title>
+</head>
+<body>
+    <h1>Welcome, {{ user.username }}</h1>
+    
+    <div class="user-info">
+        <p><strong>Name:</strong> {{ user.name }}</p>
+        <p><strong>Email:</strong> {{ user.email }}</p>
+    </div>
+
+    {% if app.request.query.get('success') %}
+        <div class="success">Profile updated successfully</div>
+    {% endif %}
+
+    <h2>Update Profile</h2>
+    <form method="POST" action="/profile/update">
+        <label for="email">Email:</label>
+        <input type="email" id="email" name="email" value="{{ user.email }}" required>
+        <button type="submit">Update Email</button>
+    </form>
+</body>
+</html>

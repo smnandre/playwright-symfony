@@ -41,8 +41,10 @@ class PlaywrightTestAssertionsTraitTest extends TestCase
                 $this->calls['locator'][] = $selector;
 
                 return new class($selector) {
-                    public function __construct(public string $selector) {}
-                    
+                    public function __construct(public string $selector)
+                    {
+                    }
+
                     public function count(): int
                     {
                         return 0;

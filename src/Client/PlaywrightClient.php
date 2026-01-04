@@ -109,7 +109,7 @@ class PlaywrightClient extends AbstractBrowser
     {
         // Extract domain from baseUrl if not provided
         $domain = $options['domain'] ?? parse_url($this->getBaseUrl(), PHP_URL_HOST) ?? 'localhost';
-        
+
         $cookie = array_merge([
             'name' => $name,
             'value' => $value,
@@ -123,12 +123,12 @@ class PlaywrightClient extends AbstractBrowser
         }
 
         $context = $this->browser->getContext();
-        
+
         if (null === $context) {
             throw new \RuntimeException('Browser context is null - browser may not be started');
         }
 
-        /** @var array{name: string, value: string, url?: string, domain?: string, path?: string, expires?: int, httpOnly?: bool, secure?: bool, sameSite?: 'Lax'|'None'|'Strict'} $cookie */
+        /* @var array{name: string, value: string, url?: string, domain?: string, path?: string, expires?: int, httpOnly?: bool, secure?: bool, sameSite?: 'Lax'|'None'|'Strict'} $cookie */
         $context->addCookies([$cookie]);
     }
 
@@ -157,7 +157,7 @@ class PlaywrightClient extends AbstractBrowser
         if (null === $domain) {
             $domain = parse_url($this->getBaseUrl(), PHP_URL_HOST) ?? 'localhost';
         }
-        
+
         $this->browser->getContext()?->deleteCookie($name, $domain, $path);
     }
 
@@ -192,7 +192,7 @@ class PlaywrightClient extends AbstractBrowser
         }
 
         // Kernel must implement getContainer() - this is the case for Symfony\Component\HttpKernel\KernelInterface implementations
-        if (!$this->kernel instanceof \Symfony\Component\HttpKernel\KernelInterface) {
+        if (!$this->kernel instanceof KernelInterface) {
             return null;
         }
 

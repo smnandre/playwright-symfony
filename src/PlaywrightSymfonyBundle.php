@@ -25,7 +25,7 @@ final class PlaywrightSymfonyBundle extends AbstractBundle
 {
     protected string $extensionAlias = 'playwright';
 
-    public function getContainerExtension(): ?ExtensionInterface
+    public function getContainerExtension(): ExtensionInterface
     {
         return new PlaywrightExtension();
     }

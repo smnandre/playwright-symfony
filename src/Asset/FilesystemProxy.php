@@ -36,7 +36,7 @@ final class FilesystemProxy implements AssetLocatorInterface
     public function locate(string $requestPath): ?AssetFile
     {
         $parsed = parse_url($requestPath, PHP_URL_PATH);
-        $path = '/'.ltrim($parsed === false ? '' : ($parsed ?? ''), '/');
+        $path = '/'.ltrim(false === $parsed ? '' : ($parsed ?? ''), '/');
         if ('/' === $path || str_contains($path, '..')) {
             return null;
         }

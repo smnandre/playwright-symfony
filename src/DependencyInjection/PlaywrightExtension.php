@@ -20,7 +20,7 @@ use Playwright\Configuration\PlaywrightConfig;
 use Playwright\Playwright;
 use Playwright\Symfony\Asset\AssetMapperProxy;
 use Playwright\Symfony\Asset\FilesystemProxy;
-use Playwright\Symfony\BrowserKit\PlaywrightBrowser as BrowserKitClient;
+use Playwright\Symfony\BrowserKit\PlaywrightClient as BrowserKitClient;
 use Playwright\Symfony\Client\Interception\AssetServer;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;

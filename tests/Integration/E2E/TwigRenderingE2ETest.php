@@ -2,6 +2,16 @@
 
 declare(strict_types=1);
 
+/*
+ * This file is part of the community-maintained Playwright PHP project.
+ * It is not affiliated with or endorsed by Microsoft.
+ *
+ * (c) 2025-Present - Playwright PHP <https://github.com/playwright-php>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
 namespace Playwright\Symfony\Tests\Integration\E2E;
 
 use Playwright\Symfony\Test\PlaywrightTestCase;
@@ -17,13 +27,13 @@ final class TwigRenderingE2ETest extends PlaywrightTestCase
     public function testTwigTemplateRendersWithVariables(): void
     {
         $this->visit('/twig');
-        
+
         // Check title variable rendered
         $this->assertPageContains('Twig Template Demo');
-        
+
         // Check message variable rendered
         $this->assertPageContains('This page is rendered using Twig templates!');
-        
+
         // Check HTML structure
         $this->assertSelectorExists('h1.heading');
         $this->assertSelectorExists('p.message');

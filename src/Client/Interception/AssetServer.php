@@ -55,7 +55,7 @@ final class AssetServer
         }
 
         $path = parse_url($url, PHP_URL_PATH);
-        
+
         if (false === $path || null === $path || '' === $path) {
             return false;
         }
@@ -77,7 +77,7 @@ final class AssetServer
     public function handle(string $url, string $method = 'GET'): ?array
     {
         $path = parse_url($url, PHP_URL_PATH);
-        
+
         if (false === $path || null === $path || '' === $path) {
             return null;
         }

@@ -104,6 +104,7 @@ class ResponseConverter
 
     /**
      * @param array<string, list<string|null>|string|null> $headers
+     *
      * @return array<string, string>
      */
     public function formatHeaders(array $headers): array
@@ -111,7 +112,7 @@ class ResponseConverter
         $formatted = [];
         foreach ($headers as $name => $values) {
             if (is_array($values)) {
-                $formatted[$name] = implode(', ', array_filter($values, fn($v) => null !== $v));
+                $formatted[$name] = implode(', ', array_filter($values, fn ($v) => null !== $v));
             } else {
                 $formatted[$name] = (string) $values;
             }
@@ -122,6 +123,7 @@ class ResponseConverter
 
     /**
      * @param array<string, string> $headers
+     *
      * @return array<string, string>
      */
     private function stripContentLength(array $headers): array

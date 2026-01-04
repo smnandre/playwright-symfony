@@ -87,6 +87,10 @@ class TestKernel extends BaseKernel
             ->load('Playwright\\Symfony\\Tests\\Fixtures\\App\\Controller\\', __DIR__.'/Controller/*')
             ->public();
 
+        $services
+            ->load('Playwright\\Symfony\\Tests\\Fixtures\\App\\Service\\', __DIR__.'/Service/*')
+            ->public();
+
         // Minimal Playwright config for tests
         $container->extension('playwright', [
             'enabled' => true,
@@ -162,6 +166,39 @@ class TestKernel extends BaseKernel
         $routes->add('session_clear_trailing', '/session-clear/')
             ->controller([Controller\SessionController::class, 'clear'])
             ->methods(['GET']);
+
+        $routes->add('service_users_list', '/service/users')
+            ->controller([Controller\ServiceDemoController::class, 'listUsers'])
+            ->methods(['GET']);
+
+        $routes->add('service_users_get', '/service/user')
+            ->controller([Controller\ServiceDemoController::class, 'getUser'])
+            ->methods(['GET']);
+
+        $routes->add('service_users_create', '/service/user')
+            ->controller([Controller\ServiceDemoController::class, 'createUser'])
+            ->methods(['POST']);
+
+        $routes->add('asset_test', '/asset-test')
+            ->controller([Controller\AssetTestController::class, 'demo'])
+            ->methods(['GET']);
+
+        // Profile routes
+        $routes->add('login', '/login')
+            ->controller([Controller\ProfileController::class, 'login'])
+            ->methods(['GET']);
+
+        $routes->add('profile', '/profile')
+            ->controller([Controller\ProfileController::class, 'profile'])
+            ->methods(['GET']);
+
+        $routes->add('profile_trailing', '/profile/')
+            ->controller([Controller\ProfileController::class, 'profile'])
+            ->methods(['GET']);
+
+        $routes->add('profile_update', '/profile/update')
+            ->controller([Controller\ProfileController::class, 'update'])
+            ->methods(['POST']);
 
         // Navigation routes - must be last to act as catch-all
         $routes->add('nav_root', '/')

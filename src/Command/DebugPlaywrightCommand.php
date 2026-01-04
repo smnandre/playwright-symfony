@@ -60,13 +60,17 @@ final class DebugPlaywrightCommand extends Command
         $playwrightPath = $this->parameterBag->get('playwright.playwright_path');
         $nodePath = $this->parameterBag->get('playwright.node_path');
 
+        $hostsDisplay = is_array($interceptedHosts) ? implode(', ', $interceptedHosts) : '';
+        $playwrightPathDisplay = is_string($playwrightPath) ? $playwrightPath : '';
+        $nodePathDisplay = is_string($nodePath) ? $nodePath : '';
+
         $io->table(
             ['Parameter', 'Value'],
             [
-                ['Intercepted Hosts', implode(', ', $interceptedHosts)],
+                ['Intercepted Hosts', $hostsDisplay],
                 ['Debug Mode', $debug ? 'Enabled' : 'Disabled'],
-                ['Playwright Path', $playwrightPath],
-                ['Node.js Path', $nodePath],
+                ['Playwright Path', $playwrightPathDisplay],
+                ['Node.js Path', $nodePathDisplay],
             ]
         );
     }
@@ -112,6 +116,7 @@ final class DebugPlaywrightCommand extends Command
     private function checkPlaywrightBinary(): bool
     {
         $playwrightPath = $this->parameterBag->get('playwright.playwright_path');
+        assert(is_string($playwrightPath));
         $command = $playwrightPath.' --version';
 
         return $this->executeWithTimeout($command, 10);
@@ -120,6 +125,7 @@ final class DebugPlaywrightCommand extends Command
     private function checkNodeJs(): bool
     {
         $nodePath = $this->parameterBag->get('playwright.node_path');
+        assert(is_string($nodePath));
         $command = $nodePath.' --version';
 
         return $this->executeWithTimeout($command, 10);

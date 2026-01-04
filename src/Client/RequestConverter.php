@@ -242,7 +242,7 @@ class RequestConverter
 
     /**
      * @param array<string, string> $headers
-     * @param array<string, mixed> $files
+     * @param array<string, mixed>  $files
      */
     private function createUploadedFile(string $name, string $filename, string $content, array $headers, array &$files): void
     {

@@ -36,7 +36,9 @@ final class SessionController
         $key = $request->query->get('key', '');
         $value = $session->get($key);
 
-        return new Response("Session value: {$value}");
+        $displayValue = null === $value ? 'null' : $value;
+
+        return new Response("Session value: {$displayValue}");
     }
 
     public function clear(Request $request): Response

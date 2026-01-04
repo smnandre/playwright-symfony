@@ -32,7 +32,7 @@ use Symfony\Component\DomCrawler\Link;
  * - By default, uses "real-browser" semantics for navigation/click/submit.
  * - Builds a DomCrawler snapshot from the live DOM after each action.
  */
-final class PlaywrightBrowser extends AbstractBrowser
+final class PlaywrightClient extends AbstractBrowser
 {
     private BrowserContextInterface $context;
 
@@ -138,7 +138,22 @@ final class PlaywrightBrowser extends AbstractBrowser
 
         CookieJarSync::toJarFromUrl($this->cookieJar, $this->context, $this->page->url());
 
-        return ResponseMapper::fromPlaywright($content, $status, $headers, $this->page->url());
+        return $this->createBrowserKitResponse($content, $status, $headers);
+    }
+
+    /**
+     * Maps Playwright response data to BrowserKit Response.
+     *
+     * @param array<string, string|array<int, string>> $headers
+     */
+    private function createBrowserKitResponse(string $content, int $status, array $headers): BrowserKitResponse
+    {
+        $flatHeaders = [];
+        foreach ($headers as $name => $value) {
+            $flatHeaders[$name] = is_array($value) ? implode(', ', $value) : (string) $value;
+        }
+
+        return new BrowserKitResponse($content, $status, $flatHeaders);
     }
 
     /**
@@ -189,24 +204,22 @@ JS,
         $this->handlePotentialPopup(fn (): mixed => $this->page->evaluate('(form) => form.requestSubmit ? form.requestSubmit() : form.submit()', $formHandle));
 
         $content = $this->page->content();
-        $playwrightResponse = ResponseMapper::lastMainResourceResponse($this->page);
-        $status = $playwrightResponse?->status() ?? 200;
-        $headers = $playwrightResponse?->headers() ?? [];
+        $status = 200;
+        $headers = [];
 
         CookieJarSync::toJarFromUrl($this->cookieJar, $this->context, $this->page->url());
 
-        return ResponseMapper::fromPlaywright($content, $status, $headers, $this->page->url());
+        return $this->createBrowserKitResponse($content, $status, $headers);
     }
 
     private function refreshSnapshotAndResponse(): Crawler
     {
-        $playwrightResponse = ResponseMapper::lastMainResourceResponse($this->page);
         $content = $this->page->content();
-        $status = $playwrightResponse?->status() ?? 200;
-        $headers = $playwrightResponse?->headers() ?? [];
+        $status = 200;
+        $headers = [];
 
         CookieJarSync::toJarFromUrl($this->cookieJar, $this->context, $this->page->url());
-        $this->lastResponse = ResponseMapper::fromPlaywright($content, $status, $headers, $this->page->url());
+        $this->lastResponse = $this->createBrowserKitResponse($content, $status, $headers);
 
         return new Crawler($content, $this->page->url());
     }

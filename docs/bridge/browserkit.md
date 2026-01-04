@@ -15,13 +15,13 @@ This bridge provides a Symfony BrowserKit client backed by a real Playwright bro
 ## Usage
 
 ```php
-use Playwright\Symfony\BrowserKit\PlaywrightBrowser;
+use Playwright\Symfony\BrowserKit\PlaywrightClient;
 use Playwright\Playwright;
 
 $pw = Playwright::chromium()->launch();
 $context = $pw->newContext();
 
-$client = PlaywrightBrowser::fromContext($context);
+$client = PlaywrightClient::fromContext($context);
 
 $crawler = $client->request('GET', 'https://example.com');
 $link = $crawler->selectLink('More information')->link();
@@ -46,7 +46,7 @@ $crawler = $client->submit($form);
 
 ## Container integration
 
-With the Symfony bundle enabled, you can autowire `Playwright\Symfony\BrowserKit\PlaywrightBrowser` (service id `Playwright\Symfony\BrowserKit\PlaywrightBrowser`) directly from the container. The bundle registers it using the default Playwright browser context, so tests can type-hint it in constructors or fetch it via `$this->getContainer()->get(...)` without manual wiring.
+With the Symfony bundle enabled, you can autowire `Playwright\Symfony\BrowserKit\PlaywrightClient` (service id `Playwright\Symfony\BrowserKit\PlaywrightClient`) directly from the container. The bundle registers it using the default Playwright browser context, so tests can type-hint it in constructors or fetch it via `$this->getContainer()->get(...)` without manual wiring.
 
 ## Limitations
 
