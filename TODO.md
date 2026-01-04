@@ -706,3 +706,7 @@ Verify that Twig templates render correctly in the same process with full Symfon
 - [✅] Configured Twig with templates path
   
 - [⏳] Creating controller that uses Twig template...
+- [✅] Created TwigDemoController
+- [✅] Added /twig route to TestKernel
+  
+- [⏳] Testing Twig rendering...

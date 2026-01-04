@@ -19,7 +19,7 @@ use Playwright\Symfony\Test\PlaywrightTestCase;
 use Playwright\Symfony\Tests\Fixtures\App\TestKernel;
 use Symfony\Component\HttpKernel\KernelInterface;
 
-final class FormValidationE2ETest extends PlaywrightTestCase
+final class ErrorHandlingE2ETest extends PlaywrightTestCase
 {
     use PlaywrightTestAssertionsTrait;
 
@@ -28,46 +28,28 @@ final class FormValidationE2ETest extends PlaywrightTestCase
         return new TestKernel('test', false);
     }
 
-    public function testFormFillAndSubmitWithValidData(): void
+    public function test400ErrorFromFormValidation(): void
     {
         $this->visit('/form');
 
-        // Fill form with valid data
-        $this->page->locator('#name')->fill('John Doe');
-        $this->page->locator('button[type="submit"]')->click();
-
-        // Assert success message
-        $this->assertPageContains('Hello John Doe');
-
-        $response = $this->getLastResponse();
-        self::assertSame(200, $response->getStatusCode());
-    }
-
-    public function testFormSubmitWithEmptyFieldShowsValidationError(): void
-    {
-        $this->visit('/form');
-
-        // Remove HTML5 validation to test server-side validation
+        // Remove HTML5 validation and submit empty
         $this->page->evaluate('() => { document.querySelector("#name").removeAttribute("required"); }');
-
-        // Try to submit empty form
         $this->page->locator('#name')->fill('');
         $this->page->locator('button[type="submit"]')->click();
 
-        // Should see validation error
-        $this->assertPageContains('Name is required');
-
         $response = $this->getLastResponse();
+
         self::assertSame(400, $response->getStatusCode());
+        $this->assertPageContains('Name is required');
     }
 
-    public function testFormFieldsAreAccessible(): void
+    public function testSuccessfulRequestReturns200(): void
     {
-        $this->visit('/form');
+        $this->visit('/hello');
 
-        // Verify form elements exist
-        $this->assertSelectorExists('form[method="POST"]');
-        $this->assertSelectorExists('#name');
-        $this->assertSelectorExists('button[type="submit"]');
+        $response = $this->getLastResponse();
+
+        self::assertSame(200, $response->getStatusCode());
+        $this->assertPageContains('hello from app');
     }
 }
