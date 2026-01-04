@@ -451,3 +451,34 @@ RELEASE:
   - ResponseConverter: 10 new tests (status codes, headers, binary handling, edge cases)
 - **Test Results**: 76 total tests, 236 assertions, 0 failures
 - **Coverage**: All core converter functionality now thoroughly tested
+
+---
+
+## 🎉 Cookie Test Fix Complete (2026-01-04 15:40)
+
+### Problem Identified
+Playwright's `addCookies()` requires `domain` parameter, NOT `url` parameter
+
+### Fixes Applied
+1. ✅ **Browser/PlaywrightBrowser.php**: `getContext()` now calls `ensureStarted()`
+   - Ensures browser is started before accessing context
+   - Prevents null context issues
+
+2. ✅ **Client/PlaywrightClient.php**: `setCookie()` uses `domain`
+   - Extracts domain from baseUrl: `parse_url($this->getBaseUrl(), PHP_URL_HOST)`
+   - Cookies now properly added to browser context
+
+3. ✅ **Client/PlaywrightClient.php**: `clearCookie()` uses `deleteCookie()`
+   - Simplified to use native deleteCookie() method
+   - Uses domain parameter consistently
+
+### Test Results
+- ✅ **CookieAndAuthE2ETest** passes in isolation (8 assertions)
+- ⚠️ Fails when run with full test suite (test interaction issue)
+- 🎯 **Overall:** 192/198 E2E tests passing (97%)
+
+### Remaining Issues
+- **3 errors:** `fill()` method doesn't exist (should be `locator()->fill()`)
+- **2 failures:** Test interaction issues (cookies, form validation)
+- **Action:** Need to investigate test isolation
+
