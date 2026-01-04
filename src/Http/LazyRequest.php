@@ -33,12 +33,16 @@ class LazyRequest implements RequestInterface
 
     public function url(): string
     {
-        return is_callable($this->data['url'] ?? null) ? ($this->data['url'])() : (string) ($this->data['url'] ?? '');
+        $url = is_callable($this->data['url'] ?? null) ? ($this->data['url'])() : ($this->data['url'] ?? '');
+
+        return is_string($url) ? $url : '';
     }
 
     public function method(): string
     {
-        return is_callable($this->data['method'] ?? null) ? ($this->data['method'])() : (string) ($this->data['method'] ?? 'GET');
+        $method = is_callable($this->data['method'] ?? null) ? ($this->data['method'])() : ($this->data['method'] ?? 'GET');
+
+        return is_string($method) ? $method : 'GET';
     }
 
     /**
@@ -92,13 +96,15 @@ class LazyRequest implements RequestInterface
             return null;
         }
 
-        /* @var array<string, mixed> */
+        /** @var array<string, mixed> $decoded */
         return $decoded;
     }
 
     public function resourceType(): string
     {
-        return (string) ($this->data['resourceType'] ?? 'document');
+        $type = $this->data['resourceType'] ?? 'document';
+
+        return is_string($type) ? $type : 'document';
     }
 
     public function headerValue(string $name): ?string
