@@ -2,6 +2,16 @@
 
 declare(strict_types=1);
 
+/*
+ * This file is part of the community-maintained Playwright PHP project.
+ * It is not affiliated with or endorsed by Microsoft.
+ *
+ * (c) 2025-Present - Playwright PHP <https://github.com/playwright-php>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
 namespace Playwright\Symfony\Tests\Fixtures\App\Controller;
 
 use Symfony\Component\Asset\Packages;
@@ -20,7 +30,7 @@ final class AssetMapperController
     {
         // Use AssetMapper to get the versioned asset URL
         $cssUrl = $this->packages->getUrl('styles/app.css');
-        
+
         $html = <<<HTML
 <!DOCTYPE html>
 <html lang="en">
@@ -45,4 +55,3 @@ HTML;
         return new Response($html);
     }
 }
-

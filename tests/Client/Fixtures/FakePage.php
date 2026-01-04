@@ -3,9 +3,13 @@
 declare(strict_types=1);
 
 /*
- * This file is part of the playwright-php/playwright package.
- * For the full copyright and license information, please view
- * the LICENSE file that was distributed with this source code.
+ * This file is part of the community-maintained Playwright PHP project.
+ * It is not affiliated with or endorsed by Microsoft.
+ *
+ * (c) 2025-Present - Playwright PHP <https://github.com/playwright-php>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
  */
 
 namespace Playwright\Symfony\Tests\Client\Fixtures;
@@ -37,7 +41,7 @@ class FakePage implements PageInterface
         $this->routeHandler = $handler;
     }
 
-    public function goto(string $url, array $options = []): ?ResponseInterface
+    public function goto(string $url, \Playwright\Page\Options\GotoOptions|array $options = []): ?ResponseInterface
     {
         $this->lastGoto = $url;
 
@@ -64,32 +68,42 @@ class FakePage implements PageInterface
         };
     }
 
-    public function click(string $selector, array $options = []): PageInterface
+    public function click(string $selector, \Playwright\Page\Options\ClickOptions|array $options = []): PageInterface
     {
         return $this;
     }
 
-    public function altClick(string $selector, array $options = []): PageInterface
+    public function altClick(string $selector, \Playwright\Page\Options\ClickOptions|array $options = []): PageInterface
     {
         return $this;
     }
 
-    public function controlClick(string $selector, array $options = []): PageInterface
+    public function controlClick(string $selector, \Playwright\Page\Options\ClickOptions|array $options = []): PageInterface
     {
         return $this;
     }
 
-    public function shiftClick(string $selector, array $options = []): PageInterface
+    public function shiftClick(string $selector, \Playwright\Page\Options\ClickOptions|array $options = []): PageInterface
     {
         return $this;
     }
 
-    public function type(string $selector, string $text, array $options = []): PageInterface
+    public function type(string $selector, string $text, \Playwright\Page\Options\TypeOptions|array $options = []): PageInterface
     {
         return $this;
     }
 
-    public function screenshot(?string $path = null, array $options = []): string
+    public function screenshot(?string $path = null, \Playwright\Page\Options\ScreenshotOptions|array $options = []): string
+    {
+        return '';
+    }
+
+    public function pdf(?string $path = null, \Playwright\Page\Options\PdfOptions|array $options = []): string
+    {
+        return '';
+    }
+
+    public function pdfContent(\Playwright\Page\Options\PdfOptions|array $options = []): string
     {
         return '';
     }
@@ -109,7 +123,7 @@ class FakePage implements PageInterface
         return null;
     }
 
-    public function waitForSelector(string $selector, array $options = []): ?LocatorInterface
+    public function waitForSelector(string $selector, \Playwright\Page\Options\WaitForSelectorOptions|array $options = []): ?LocatorInterface
     {
         return null;
     }
@@ -133,22 +147,22 @@ class FakePage implements PageInterface
         return method_exists($this->context, 'cookies') ? $this->context->cookies($urls) : [];
     }
 
-    public function goBack(array $options = []): PageInterface
+    public function goBack(\Playwright\Page\Options\NavigationHistoryOptions|array $options = []): PageInterface
     {
         return $this;
     }
 
-    public function goForward(array $options = []): PageInterface
+    public function goForward(\Playwright\Page\Options\NavigationHistoryOptions|array $options = []): PageInterface
     {
         return $this;
     }
 
-    public function reload(array $options = []): PageInterface
+    public function reload(\Playwright\Page\Options\NavigationHistoryOptions|array $options = []): PageInterface
     {
         return $this;
     }
 
-    public function setContent(string $html, array $options = []): PageInterface
+    public function setContent(string $html, \Playwright\Page\Options\SetContentOptions|array $options = []): PageInterface
     {
         return $this;
     }
@@ -173,12 +187,12 @@ class FakePage implements PageInterface
         return $this;
     }
 
-    public function waitForLoadState(string $state = 'load', array $options = []): PageInterface
+    public function waitForLoadState(string $state = 'load', \Playwright\Page\Options\WaitForLoadStateOptions|array $options = []): PageInterface
     {
         return $this;
     }
 
-    public function waitForURL($url, array $options = []): PageInterface
+    public function waitForURL($url, \Playwright\Page\Options\WaitForUrlOptions|array $options = []): PageInterface
     {
         return $this;
     }
@@ -187,12 +201,12 @@ class FakePage implements PageInterface
     {
     }
 
-    public function addScriptTag(array $options): PageInterface
+    public function addScriptTag(\Playwright\Page\Options\ScriptTagOptions|array $options): PageInterface
     {
         return $this;
     }
 
-    public function addStyleTag(array $options): PageInterface
+    public function addStyleTag(\Playwright\Page\Options\StyleTagOptions|array $options): PageInterface
     {
         return $this;
     }
@@ -255,7 +269,7 @@ class FakePage implements PageInterface
     {
     }
 
-    public function setInputFiles(string $selector, array $files, array $options = []): PageInterface
+    public function setInputFiles(string $selector, array $files, \Playwright\Page\Options\SetInputFilesOptions|array $options = []): PageInterface
     {
         return $this;
     }
@@ -275,44 +289,44 @@ class FakePage implements PageInterface
         return [];
     }
 
-    public function frame(array $options): ?FrameInterface
+    public function frame(\Playwright\Page\Options\FrameQueryOptions|array $options): ?FrameInterface
     {
         return null;
     }
 
-    public function getByAltText(string $text, array $options = []): LocatorInterface
+    public function getByAltText(string $text, \Playwright\Locator\Options\LocatorOptions|array $options = []): LocatorInterface
     {
-        // TODO: Implement getByAltText() method.
+        return $this->locator('fake-locator');
     }
 
-    public function getByLabel(string $text, array $options = []): LocatorInterface
+    public function getByLabel(string $text, \Playwright\Locator\Options\LocatorOptions|array $options = []): LocatorInterface
     {
-        // TODO: Implement getByLabel() method.
+        return $this->locator('fake-locator');
     }
 
-    public function getByPlaceholder(string $text, array $options = []): LocatorInterface
+    public function getByPlaceholder(string $text, \Playwright\Locator\Options\LocatorOptions|array $options = []): LocatorInterface
     {
-        // TODO: Implement getByPlaceholder() method.
+        return $this->locator('fake-locator');
     }
 
-    public function getByRole(string $role, array $options = []): LocatorInterface
+    public function getByRole(string $role, \Playwright\Locator\Options\GetByRoleOptions|array $options = []): LocatorInterface
     {
-        // TODO: Implement getByRole() method.
+        return $this->locator('fake-locator');
     }
 
-    public function getByTestId(string $testId): LocatorInterface
+    public function getByTestId(string $testId, \Playwright\Locator\Options\LocatorOptions|array $options = []): LocatorInterface
     {
-        // TODO: Implement getByTestId() method.
+        return $this->locator('fake-locator');
     }
 
-    public function getByText(string $text, array $options = []): LocatorInterface
+    public function getByText(string $text, \Playwright\Locator\Options\LocatorOptions|array $options = []): LocatorInterface
     {
-        // TODO: Implement getByText() method.
+        return $this->locator('fake-locator');
     }
 
-    public function getByTitle(string $text, array $options = []): LocatorInterface
+    public function getByTitle(string $text, \Playwright\Locator\Options\LocatorOptions|array $options = []): LocatorInterface
     {
-        // TODO: Implement getByTitle() method.
+        return $this->locator('fake-locator');
     }
 
     public function isClosed(): bool
@@ -330,13 +344,28 @@ class FakePage implements PageInterface
         // TODO: Implement setDefaultTimeout() method.
     }
 
-    public function waitForPopup(callable $action, array $options = []): PageInterface
+    public function waitForPopup(callable $action, \Playwright\Page\Options\WaitForPopupOptions|array $options = []): PageInterface
     {
-        // TODO: Implement waitForPopup() method.
+        return $this;
+    }
+
+    public function waitForResponse($url, \Playwright\Page\Options\WaitForResponseOptions|array $options = []): ResponseInterface
+    {
+        return new class implements ResponseInterface {
+            public function __call($name, $arguments)
+            {
+                return null;
+            }
+        };
     }
 
     public function request(): APIRequestContextInterface
     {
-        // TODO: Implement request() method.
+        return new class implements APIRequestContextInterface {
+            public function __call($name, $arguments)
+            {
+                return null;
+            }
+        };
     }
 }

@@ -3,9 +3,13 @@
 declare(strict_types=1);
 
 /*
- * This file is part of the playwright-php/playwright package.
- * For the full copyright and license information, please view
- * the LICENSE file that was distributed with this source code.
+ * This file is part of the community-maintained Playwright PHP project.
+ * It is not affiliated with or endorsed by Microsoft.
+ *
+ * (c) 2025-Present - Playwright PHP <https://github.com/playwright-php>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
  */
 
 namespace Playwright\Symfony\Client;
@@ -25,6 +29,9 @@ class RequestConverter
     public function convertToSymfonyRequest(RequestInterface $playwrightRequest): SymfonyRequest
     {
         $url = parse_url($playwrightRequest->url());
+        if (false === $url) {
+            $url = [];
+        }
         $method = $playwrightRequest->method();
         $headers = $playwrightRequest->headers();
         $postData = $playwrightRequest->postData();
@@ -34,7 +41,7 @@ class RequestConverter
         $files = [];
         $server = [
             'REQUEST_METHOD' => $method,
-            'REQUEST_URI' => $url['path'].(isset($url['query']) ? '?'.$url['query'] : ''),
+            'REQUEST_URI' => ($url['path'] ?? '/').(isset($url['query']) ? '?'.$url['query'] : ''),
             'SERVER_NAME' => $url['host'] ?? 'localhost',
             'SERVER_PORT' => $url['port'] ?? 80,
             'HTTP_HOST' => $url['host'] ?? 'localhost',
@@ -42,7 +49,7 @@ class RequestConverter
         ];
 
         // Normalize headers
-        $lower = is_array($headers) ? array_change_key_case($headers, CASE_LOWER) : [];
+        $lower = array_change_key_case($headers, CASE_LOWER);
         foreach ($headers as $name => $value) {
             $key = strtoupper(str_replace('-', '_', (string) $name));
             if ('CONTENT_TYPE' === $key || 'CONTENT_LENGTH' === $key) {
@@ -53,25 +60,21 @@ class RequestConverter
         }
 
         // Parse cookies
-        if (isset($lower['cookie']) && is_string($lower['cookie'])) {
+        if (isset($lower['cookie'])) {
             $cookies = $this->parseCookieHeader($lower['cookie']);
         }
 
         $content = null;
         if ($postData) {
-            if (is_string($postData)) {
-                $contentType = $lower['content-type'] ?? null;
-                if ($contentType && str_starts_with(strtolower((string) $contentType), 'application/x-www-form-urlencoded')) {
-                    parse_str($postData, $parameters);
-                    $content = $postData;
-                } elseif ($contentType && str_starts_with(strtolower((string) $contentType), 'multipart/form-data')) {
-                    $content = $postData;
-                    $this->parseMultipartFormData((string) $contentType, $postData, $parameters, $files);
-                } else {
-                    $content = $postData;
-                }
+            $contentType = $lower['content-type'] ?? null;
+            if ($contentType && str_starts_with(strtolower((string) $contentType), 'application/x-www-form-urlencoded')) {
+                parse_str($postData, $parameters);
+                $content = $postData;
+            } elseif ($contentType && str_starts_with(strtolower((string) $contentType), 'multipart/form-data')) {
+                $content = $postData;
+                $this->parseMultipartFormData((string) $contentType, $postData, $parameters, $files);
             } else {
-                $parameters = $postData;
+                $content = $postData;
             }
         }
 
@@ -88,6 +91,9 @@ class RequestConverter
         );
     }
 
+    /**
+     * @return array<string, string>
+     */
     private function parseCookieHeader(string $cookieHeader): array
     {
         $cookies = [];
@@ -106,6 +112,10 @@ class RequestConverter
         return $cookies;
     }
 
+    /**
+     * @param array<string, mixed> $parameters
+     * @param array<string, mixed> $files
+     */
     private function parseMultipartFormData(string $contentType, string $body, array &$parameters, array &$files): void
     {
         $boundary = $this->extractBoundary($contentType);
@@ -135,9 +145,6 @@ class RequestConverter
 
             $rawHeaders = substr($section, 0, $headerEnd);
             $partBody = substr($section, $headerEnd + 4);
-            if (false === $partBody) {
-                continue;
-            }
 
             $headers = $this->parsePartHeaders($rawHeaders);
             $disposition = $headers['content-disposition'] ?? null;
@@ -186,6 +193,9 @@ class RequestConverter
         return HeaderUtils::unquote($boundary);
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     private function parseContentDisposition(string $header): array
     {
         $parts = HeaderUtils::split($header, ';=');
@@ -209,10 +219,17 @@ class RequestConverter
         return $assoc;
     }
 
+    /**
+     * @return array<string, string>
+     */
     private function parsePartHeaders(string $rawHeaders): array
     {
         $headers = [];
-        foreach (preg_split('/\r?\n/', $rawHeaders) as $line) {
+        $lines = preg_split('/\r?\n/', $rawHeaders);
+        if (false === $lines) {
+            return $headers;
+        }
+        foreach ($lines as $line) {
             if (false !== ($pos = strpos($line, ':'))) {
                 $name = strtolower(trim(substr($line, 0, $pos)));
                 $value = trim(substr($line, $pos + 1));
@@ -223,6 +240,10 @@ class RequestConverter
         return $headers;
     }
 
+    /**
+     * @param array<string, string> $headers
+     * @param array<string, mixed> $files
+     */
     private function createUploadedFile(string $name, string $filename, string $content, array $headers, array &$files): void
     {
         $tmp = tempnam(sys_get_temp_dir(), 'pw_upload_');
@@ -237,6 +258,9 @@ class RequestConverter
         $this->setArrayByPath($files, $name, $upload);
     }
 
+    /**
+     * @param array<string, mixed> $target
+     */
     private function setArrayByPath(array &$target, string $path, mixed $value): void
     {
         if (!str_contains($path, '[')) {
@@ -247,7 +271,8 @@ class RequestConverter
 
         $segments = [];
         if (preg_match_all('/\[([^\]]*)\]/', $path, $matches)) {
-            $root = substr($path, 0, strpos($path, '['));
+            $bracketPos = strpos($path, '[');
+            $root = false !== $bracketPos ? substr($path, 0, $bracketPos) : $path;
             $segments[] = $root;
             foreach ($matches[1] as $segment) {
                 $segments[] = $segment;

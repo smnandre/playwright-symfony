@@ -3,9 +3,13 @@
 declare(strict_types=1);
 
 /*
- * This file is part of the playwright-php/playwright package.
- * For the full copyright and license information, please view
- * the LICENSE file that was distributed with this source code.
+ * This file is part of the community-maintained Playwright PHP project.
+ * It is not affiliated with or endorsed by Microsoft.
+ *
+ * (c) 2025-Present - Playwright PHP <https://github.com/playwright-php>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
  */
 
 namespace Playwright\Symfony\Tests\Client;
@@ -13,6 +17,9 @@ namespace Playwright\Symfony\Tests\Client;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Playwright\Symfony\Browser\PlaywrightBrowser;
+use Playwright\Symfony\Client\Interception\AssetFile;
+use Playwright\Symfony\Client\Interception\AssetLocatorInterface;
+use Playwright\Symfony\Client\Interception\AssetServer;
 use Playwright\Symfony\Client\PlaywrightClient;
 use Playwright\Symfony\Client\RequestConverter;
 use Playwright\Symfony\Client\ResponseConverter;
@@ -21,9 +28,6 @@ use Playwright\Symfony\Tests\Client\Fixtures\FakeLogger;
 use Playwright\Symfony\Tests\Client\Fixtures\FakePage;
 use Playwright\Symfony\Tests\Client\Fixtures\TestPlaywrightBrowser;
 use Playwright\Symfony\Tests\Fixtures\MockRequest;
-use Playwright\Symfony\Client\Interception\AssetFile;
-use Playwright\Symfony\Client\Interception\AssetLocatorInterface;
-use Playwright\Symfony\Client\Interception\AssetServer;
 use Symfony\Component\HttpFoundation\Request as SymfonyRequest;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
@@ -173,7 +177,7 @@ class PlaywrightClientTest extends TestCase
 
     public function testAssetRequestServedByAssetServer(): void
     {
-        $kernel = new class() implements HttpKernelInterface {
+        $kernel = new class implements HttpKernelInterface {
             public bool $handled = false;
 
             public function handle(SymfonyRequest $request, int $type = self::MAIN_REQUEST, bool $catch = true): SymfonyResponse
@@ -250,7 +254,7 @@ class PlaywrightClientTest extends TestCase
         self::assertTrue($logger->hasRecord('info', static function (array $context, string $message): bool {
             return ($context['uri'] ?? null) === 'http://localhost/logged'
                 && ($context['status_code'] ?? null) === 200
-                && $message === 'Fulfilled intercepted request';
+                && 'Fulfilled intercepted request' === $message;
         }));
     }
 

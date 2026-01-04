@@ -3,9 +3,13 @@
 declare(strict_types=1);
 
 /*
- * This file is part of the playwright-php/playwright package.
- * For the full copyright and license information, please view
- * the LICENSE file that was distributed with this source code.
+ * This file is part of the community-maintained Playwright PHP project.
+ * It is not affiliated with or endorsed by Microsoft.
+ *
+ * (c) 2025-Present - Playwright PHP <https://github.com/playwright-php>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
  */
 
 namespace Playwright\Symfony\Tests\Fixtures\Browser;
@@ -27,79 +31,89 @@ final class DummyPage implements PageInterface
     /** @var array<int, array{0: string, 1: callable}> */
     public array $routes = [];
 
-    public function locator(string $selector): LocatorInterface
+    public function locator(string $selector, \Playwright\Locator\Options\LocatorOptions|array $options = []): LocatorInterface
     {
         throw new \BadMethodCallException('Not needed in DummyPage');
     }
 
-    public function getByAltText(string $text, array $options = []): LocatorInterface
+    public function getByAltText(string $text, \Playwright\Locator\Options\LocatorOptions|array $options = []): LocatorInterface
     {
         throw new \BadMethodCallException('Not needed in DummyPage');
     }
 
-    public function getByLabel(string $text, array $options = []): LocatorInterface
+    public function getByLabel(string $text, \Playwright\Locator\Options\LocatorOptions|array $options = []): LocatorInterface
     {
         throw new \BadMethodCallException('Not needed in DummyPage');
     }
 
-    public function getByPlaceholder(string $text, array $options = []): LocatorInterface
+    public function getByPlaceholder(string $text, \Playwright\Locator\Options\LocatorOptions|array $options = []): LocatorInterface
     {
         throw new \BadMethodCallException('Not needed in DummyPage');
     }
 
-    public function getByRole(string $role, array $options = []): LocatorInterface
+    public function getByRole(string $role, \Playwright\Locator\Options\GetByRoleOptions|array $options = []): LocatorInterface
     {
         throw new \BadMethodCallException('Not needed in DummyPage');
     }
 
-    public function getByTestId(string $testId): LocatorInterface
+    public function getByTestId(string $testId, \Playwright\Locator\Options\LocatorOptions|array $options = []): LocatorInterface
     {
         throw new \BadMethodCallException('Not needed in DummyPage');
     }
 
-    public function getByText(string $text, array $options = []): LocatorInterface
+    public function getByText(string $text, \Playwright\Locator\Options\LocatorOptions|array $options = []): LocatorInterface
     {
         throw new \BadMethodCallException('Not needed in DummyPage');
     }
 
-    public function getByTitle(string $text, array $options = []): LocatorInterface
+    public function getByTitle(string $text, \Playwright\Locator\Options\LocatorOptions|array $options = []): LocatorInterface
     {
         throw new \BadMethodCallException('Not needed in DummyPage');
     }
 
-    public function goto(string $url, array $options = []): ?ResponseInterface
+    public function goto(string $url, \Playwright\Page\Options\GotoOptions|array $options = []): ?ResponseInterface
     {
         return null;
     }
 
-    public function click(string $selector, array $options = []): self
+    public function click(string $selector, \Playwright\Page\Options\ClickOptions|array $options = []): self
     {
         return $this;
     }
 
-    public function altClick(string $selector, array $options = []): self
+    public function altClick(string $selector, \Playwright\Page\Options\ClickOptions|array $options = []): self
     {
         return $this;
     }
 
-    public function controlClick(string $selector, array $options = []): self
+    public function controlClick(string $selector, \Playwright\Page\Options\ClickOptions|array $options = []): self
     {
         return $this;
     }
 
-    public function shiftClick(string $selector, array $options = []): self
+    public function shiftClick(string $selector, \Playwright\Page\Options\ClickOptions|array $options = []): self
     {
         return $this;
     }
 
-    public function type(string $selector, string $text, array $options = []): self
+    public function type(string $selector, string $text, \Playwright\Page\Options\TypeOptions|array $options = []): self
     {
         return $this;
     }
 
-    public function screenshot(?string $path = null, array $options = []): string
+    public function screenshot(?string $path = null, \Playwright\Page\Options\ScreenshotOptions|array $options = []): string
     {
         return $path ?? '';
+    }
+
+    public function pdf(?string $path = null, \Playwright\Page\Options\PdfOptions|array $options = []): string
+    {
+        return $path ?? '';
+    }
+
+    public function pdfContent(\Playwright\Page\Options\PdfOptions|array $options = []): string
+    {
+        return '';
     }
 
     public function content(): ?string
@@ -112,7 +126,7 @@ final class DummyPage implements PageInterface
         return null;
     }
 
-    public function waitForSelector(string $selector, array $options = []): ?LocatorInterface
+    public function waitForSelector(string $selector, \Playwright\Page\Options\WaitForSelectorOptions|array $options = []): ?LocatorInterface
     {
         return null;
     }
@@ -141,22 +155,22 @@ final class DummyPage implements PageInterface
         return [];
     }
 
-    public function goBack(array $options = []): self
+    public function goBack(\Playwright\Page\Options\NavigationHistoryOptions|array $options = []): self
     {
         return $this;
     }
 
-    public function goForward(array $options = []): self
+    public function goForward(\Playwright\Page\Options\NavigationHistoryOptions|array $options = []): self
     {
         return $this;
     }
 
-    public function reload(array $options = []): self
+    public function reload(\Playwright\Page\Options\NavigationHistoryOptions|array $options = []): self
     {
         return $this;
     }
 
-    public function setContent(string $html, array $options = []): self
+    public function setContent(string $html, \Playwright\Page\Options\SetContentOptions|array $options = []): self
     {
         return $this;
     }
@@ -191,22 +205,22 @@ final class DummyPage implements PageInterface
         return $this;
     }
 
-    public function waitForLoadState(string $state = 'load', array $options = []): self
+    public function waitForLoadState(string $state = 'load', \Playwright\Page\Options\WaitForLoadStateOptions|array $options = []): self
     {
         return $this;
     }
 
-    public function waitForURL($url, array $options = []): self
+    public function waitForURL($url, \Playwright\Page\Options\WaitForUrlOptions|array $options = []): self
     {
         return $this;
     }
 
-    public function addScriptTag(array $options): self
+    public function addScriptTag(\Playwright\Page\Options\ScriptTagOptions|array $options): self
     {
         return $this;
     }
 
-    public function addStyleTag(array $options): self
+    public function addStyleTag(\Playwright\Page\Options\StyleTagOptions|array $options): self
     {
         return $this;
     }
@@ -253,12 +267,22 @@ final class DummyPage implements PageInterface
     {
     }
 
-    public function waitForPopup(callable $action, array $options = []): self
+    public function waitForPopup(callable $action, \Playwright\Page\Options\WaitForPopupOptions|array $options = []): self
     {
         return $this;
     }
 
-    public function setInputFiles(string $selector, array $files, array $options = []): self
+    public function waitForResponse($url, \Playwright\Page\Options\WaitForResponseOptions|array $options = []): ResponseInterface
+    {
+        return new class implements ResponseInterface {
+            public function __call($name, $arguments)
+            {
+                return null;
+            }
+        };
+    }
+
+    public function setInputFiles(string $selector, array $files, \Playwright\Page\Options\SetInputFilesOptions|array $options = []): self
     {
         return $this;
     }
@@ -273,14 +297,14 @@ final class DummyPage implements PageInterface
         return [];
     }
 
-    public function frame(array $options): ?FrameInterface
+    public function frame(\Playwright\Page\Options\FrameQueryOptions|array $options): ?FrameInterface
     {
         return null;
     }
 
     public function request(): APIRequestContextInterface
     {
-        return new class() implements APIRequestContextInterface {
+        return new class implements APIRequestContextInterface {
             public function get(string $url, array $options = []): APIResponseInterface
             {
                 return $this->fakeResponse();
@@ -327,7 +351,7 @@ final class DummyPage implements PageInterface
 
             private function fakeResponse(): APIResponseInterface
             {
-                return new class() implements APIResponseInterface {
+                return new class implements APIResponseInterface {
                 };
             }
         };

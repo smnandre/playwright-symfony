@@ -3,9 +3,13 @@
 declare(strict_types=1);
 
 /*
- * This file is part of the playwright-php/playwright package.
- * For the full copyright and license information, please view
- * the LICENSE file that was distributed with this source code.
+ * This file is part of the community-maintained Playwright PHP project.
+ * It is not affiliated with or endorsed by Microsoft.
+ *
+ * (c) 2025-Present - Playwright PHP <https://github.com/playwright-php>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
  */
 
 namespace Playwright\Symfony\Client;
@@ -17,10 +21,12 @@ use Playwright\Symfony\Client\Interception\AssetServer;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\BrowserKit\AbstractBrowser;
-use Symfony\Component\BrowserKit\Response;
+use Symfony\Component\BrowserKit\Request as BrowserKitRequest;
+use Symfony\Component\BrowserKit\Response as BrowserKitResponse;
 use Symfony\Component\HttpFoundation\Request as SymfonyRequest;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
+use Symfony\Component\HttpKernel\KernelInterface;
 use Symfony\Component\HttpKernel\Profiler\Profile;
 use Symfony\Component\HttpKernel\Profiler\Profiler;
 
@@ -33,17 +39,24 @@ use Symfony\Component\HttpKernel\Profiler\Profiler;
  * @internal
  *
  * @final
+ *
+ * @extends AbstractBrowser<BrowserKitRequest, BrowserKitResponse>
  */
 class PlaywrightClient extends AbstractBrowser
 {
     private ?SymfonyRequest $lastSymfonyRequest = null;
     private ?SymfonyResponse $lastSymfonyResponse = null;
+    /** @var string[] */
     private array $interceptedHosts = ['localhost', '127.0.0.1', 'testapp.local'];
     private ?object $hookReceiver = null;
     private bool $interceptorSetUp = false;
     private ?AssetServer $assetServer;
     private ?string $lastProfileToken = null;
 
+    /**
+     * @param array<string, mixed> $server
+     * @param string[]|null        $interceptedHosts
+     */
     public function __construct(
         private readonly PlaywrightBrowser $browser,
         private readonly HttpKernelInterface $kernel,
@@ -74,16 +87,24 @@ class PlaywrightClient extends AbstractBrowser
         $url = $this->getBaseUrl().$path;
         $this->log('debug', 'Navigating with Playwright', ['url' => $url]);
         $page = $this->browser->getPage();
+
+        if (null === $page) {
+            throw new \RuntimeException('No page available. Browser may not be started.');
+        }
+
         $page->goto($url);
 
         return $page;
     }
 
-    public function getPage(): PageInterface
+    public function getPage(): ?PageInterface
     {
         return $this->browser->getPage();
     }
 
+    /**
+     * @param array<string, mixed> $options
+     */
     public function setCookie(string $name, string $value, array $options = []): void
     {
         $cookie = array_merge([
@@ -93,10 +114,12 @@ class PlaywrightClient extends AbstractBrowser
             'path' => $options['path'] ?? '/',
         ], $options);
 
-        if (isset($cookie['expires']) && !is_int($cookie['expires'])) {
+        // Ensure expires is int if set
+        if (isset($cookie['expires'])) {
             $cookie['expires'] = (int) $cookie['expires'];
         }
 
+        /** @var array{name: string, value: string, url?: string, domain?: string, path?: string, expires?: int, httpOnly?: bool, secure?: bool, sameSite?: 'Lax'|'None'|'Strict'} $cookie */
         $this->browser->getContext()?->addCookies([$cookie]);
     }
 
@@ -106,8 +129,8 @@ class PlaywrightClient extends AbstractBrowser
         $cookies = $this->browser->getContext()?->cookies([$url]) ?? [];
 
         foreach ($cookies as $cookie) {
-            if (($cookie['name'] ?? null) === $name) {
-                return $cookie['value'] ?? null;
+            if ($cookie['name'] === $name) {
+                return $cookie['value'];
             }
         }
 
@@ -137,6 +160,9 @@ class PlaywrightClient extends AbstractBrowser
         $this->browser->getContext()?->addCookies([$cookie]);
     }
 
+    /**
+     * @param array<string, mixed> $context
+     */
     public function authenticate(string $identifier = 'user', array $context = []): void
     {
         $payload = json_encode(['id' => $identifier, 'ctx' => $context], JSON_THROW_ON_ERROR);
@@ -164,18 +190,21 @@ class PlaywrightClient extends AbstractBrowser
             return null;
         }
 
-        // Access the container from the kernel to get the profiler service
-        // We use $this->kernel->getContainer() directly which implies a booted kernel.
-        // In a test environment, the kernel is usually booted in setUp.
-        if (!$this->kernel->getContainer()->has('profiler')) {
+        // Kernel must implement getContainer() - this is the case for Symfony\Component\HttpKernel\KernelInterface implementations
+        if (!$this->kernel instanceof \Symfony\Component\HttpKernel\KernelInterface) {
             return null;
         }
 
-        /** @var Profiler $profiler */
-        $profiler = $this->kernel->getContainer()->get('profiler');
+        // Access the container from the kernel to get the profiler service
+        $container = $this->kernel->getContainer();
 
-        // The profiler service might be null in some test configurations (e.g. if WebProfilerBundle is not enabled).
-        if (null === $profiler) {
+        if (!$container->has('profiler')) {
+            return null;
+        }
+
+        $profiler = $container->get('profiler');
+
+        if (!$profiler instanceof Profiler) {
             return null;
         }
 
@@ -187,17 +216,26 @@ class PlaywrightClient extends AbstractBrowser
         return $this->baseUrl;
     }
 
+    /**
+     * @param string[] $hosts
+     */
     public function setInterceptedHosts(array $hosts): void
     {
         $this->interceptedHosts = $hosts;
     }
 
+    /**
+     * @return string[]
+     */
     public function getInterceptedHosts(): array
     {
         return $this->interceptedHosts;
     }
 
-    protected function doRequest(object $request): Response
+    /**
+     * @param BrowserKitRequest $request
+     */
+    protected function doRequest(object $request): BrowserKitResponse
     {
         // This method is required by AbstractBrowser but we handle requests
         // through Playwright's route interception instead
@@ -216,6 +254,7 @@ class PlaywrightClient extends AbstractBrowser
                     'method' => $request->method(),
                 ]);
                 $route->continue();
+
                 return;
             }
 
@@ -230,6 +269,7 @@ class PlaywrightClient extends AbstractBrowser
                         'method' => $request->method(),
                     ]);
                     $route->fulfill($assetResponse);
+
                     return;
                 }
 
@@ -244,9 +284,12 @@ class PlaywrightClient extends AbstractBrowser
         });
     }
 
-    private function shouldInterceptRequest(array $url): bool
+    /**
+     * @param array<string, mixed>|false $url
+     */
+    private function shouldInterceptRequest(array|false $url): bool
     {
-        return isset($url['host']) && in_array($url['host'], $this->interceptedHosts, true);
+        return is_array($url) && isset($url['host']) && in_array($url['host'], $this->interceptedHosts, true);
     }
 
     private function handleInternalRequest(RequestInterface $playwrightRequest): SymfonyResponse
@@ -259,7 +302,7 @@ class PlaywrightClient extends AbstractBrowser
         // Capture any debug output that might be generated
         $bufferLevel = ob_get_level();
         ob_start();
-        
+
         try {
             $this->lastSymfonyRequest = $symfonyRequest;
             $response = $this->kernel->handle($symfonyRequest, HttpKernelInterface::MAIN_REQUEST, false);
@@ -296,7 +339,7 @@ class PlaywrightClient extends AbstractBrowser
                 'exception' => $e::class,
                 'message' => $e->getMessage(),
             ], false);
-            
+
             throw $e;
         }
     }
@@ -323,12 +366,17 @@ class PlaywrightClient extends AbstractBrowser
         }
     }
 
+    /**
+     * @param array<string, mixed> $context
+     */
     private function log(string $level, string $message, array $context = [], bool $requiresDebug = true): void
     {
         if ($requiresDebug && !$this->debugLogging) {
             return;
         }
 
-        $this->logger->log($level, $message, $context);
+        if (null !== $this->logger) {
+            $this->logger->log($level, $message, $context);
+        }
     }
 }

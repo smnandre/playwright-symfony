@@ -3,9 +3,13 @@
 declare(strict_types=1);
 
 /*
- * This file is part of the playwright-php/playwright package.
- * For the full copyright and license information, please view
- * the LICENSE file that was distributed with this source code.
+ * This file is part of the community-maintained Playwright PHP project.
+ * It is not affiliated with or endorsed by Microsoft.
+ *
+ * (c) 2025-Present - Playwright PHP <https://github.com/playwright-php>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
  */
 
 namespace Playwright\Symfony\Browser;
@@ -30,6 +34,9 @@ class PlaywrightBrowser
     private ?BrowserContextInterface $context = null;
     private ?PageInterface $page = null;
 
+    /**
+     * @param array<string, mixed> $launchOptions
+     */
     public function __construct(
         private readonly string $browserType = 'chromium',
         private readonly bool $headless = true,
@@ -79,7 +86,9 @@ class PlaywrightBrowser
     public function setupRouting(callable $routeHandler): void
     {
         $this->ensureStarted();
-        $this->page->route('**/*', $routeHandler);
+        if (null !== $this->page) {
+            $this->page->route('**/*', $routeHandler);
+        }
     }
 
     public function isHeadless(): bool

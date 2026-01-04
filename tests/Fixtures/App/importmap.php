@@ -1,16 +1,17 @@
 <?php
 
-/**
- * Returns the importmap for this application.
+declare(strict_types=1);
+
+/*
+ * This file is part of the community-maintained Playwright PHP project.
+ * It is not affiliated with or endorsed by Microsoft.
  *
- * - "path" is a path inside the asset mapper system. Use the
- *           "debug:asset-map" command to see the full list of paths.
+ * (c) 2025-Present - Playwright PHP <https://github.com/playwright-php>
  *
- * - "entrypoint" (JavaScript only) set to true for any module that will
- *                be used as an "entrypoint" (and passed to the importmap() Twig function).
- *
- * The "importmap:require" command can be used to add new entries to this file.
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
  */
+
 return [
     'app' => [
         'path' => './styles/app.css',

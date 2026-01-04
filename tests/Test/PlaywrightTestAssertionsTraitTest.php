@@ -2,6 +2,16 @@
 
 declare(strict_types=1);
 
+/*
+ * This file is part of the community-maintained Playwright PHP project.
+ * It is not affiliated with or endorsed by Microsoft.
+ *
+ * (c) 2025-Present - Playwright PHP <https://github.com/playwright-php>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
 namespace Playwright\Symfony\Tests\Test;
 
 use PHPUnit\Framework\TestCase;
@@ -30,7 +40,14 @@ class PlaywrightTestAssertionsTraitTest extends TestCase
             {
                 $this->calls['locator'][] = $selector;
 
-                return (object) ['selector' => $selector];
+                return new class($selector) {
+                    public function __construct(public string $selector) {}
+                    
+                    public function count(): int
+                    {
+                        return 0;
+                    }
+                };
             }
 
             public function querySelector(string $selector): ?object
@@ -94,11 +111,11 @@ class PlaywrightTestAssertionsTraitTest extends TestCase
         $this->assertSame(['#main'], $this->page->calls['locator'] ?? []);
     }
 
-    public function testAssertSelectorNotExistsUsesQuerySelector(): void
+    public function testAssertSelectorNotExistsUsesLocator(): void
     {
         $this->assertSelectorNotExists('.missing');
 
-        $this->assertSame(['.missing'], $this->page->calls['querySelector'] ?? []);
+        $this->assertSame(['.missing'], $this->page->calls['locator'] ?? []);
     }
 
     public function testInteractionHelpersDelegateToPage(): void
@@ -120,4 +137,3 @@ class PlaywrightTestAssertionsTraitTest extends TestCase
         $this->assertSame([['path' => '/tmp/screenshot.png']], $this->page->calls['screenshot'] ?? []);
     }
 }
-

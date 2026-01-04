@@ -3,9 +3,13 @@
 declare(strict_types=1);
 
 /*
- * This file is part of the playwright-php/playwright package.
- * For the full copyright and license information, please view
- * the LICENSE file that was distributed with this source code.
+ * This file is part of the community-maintained Playwright PHP project.
+ * It is not affiliated with or endorsed by Microsoft.
+ *
+ * (c) 2025-Present - Playwright PHP <https://github.com/playwright-php>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
  */
 
 namespace Playwright\Symfony\Tests\Functional;
@@ -17,13 +21,13 @@ use Symfony\Component\HttpKernel\KernelInterface;
 
 /**
  * Functional test for AssetMapper integration with Playwright.
- * 
+ *
  * This test verifies that:
  * - HTML pages with linked CSS assets are rendered correctly
  * - AssetMapper serves CSS files from the configured asset paths
  * - Styles are applied in the browser and can be inspected
  * - Playwright can verify computed styles in a real browser context
- * 
+ *
  * This demonstrates full integration between Symfony's AssetMapper
  * and Playwright for testing frontend assets and styling.
  */
@@ -41,7 +45,7 @@ final class AssetMapperE2ETest extends PlaywrightTestCase
 
     private static function isPlaywrightEnabled(): bool
     {
-        return getenv('PLAYWRIGHT_E2E') === '1';
+        return '1' === getenv('PLAYWRIGHT_E2E');
     }
 
     protected static function createKernel(array $options = []): KernelInterface
@@ -56,13 +60,13 @@ final class AssetMapperE2ETest extends PlaywrightTestCase
      * Supports:
      * - rgb(r, g, b)
      * - rgba(r, g, b, 1)
-     * - rgb/rgba with space-separated values and optional "/ 1" alpha (CSS Color 4)
+     * - rgb/rgba with space-separated values and optional "/ 1" alpha (CSS Color 4).
      */
     private static function colorRegex(int $r, int $g, int $b): string
     {
         // separators can be comma or space; alpha can be omitted or explicitly set to 1 or 1.0
         // Example matches: rgb(52, 152, 219), rgba(52,152,219,1), rgb(52 152 219 / 1)
-        return '~^rgba?\(\s*' . $r . '\s*[ ,]\s*' . $g . '\s*[ ,]\s*' . $b . '\s*(?:[\/,]\s*(?:1(?:\.0+)?))?\s*\)$~i';
+        return '~^rgba?\(\s*'.$r.'\s*[ ,]\s*'.$g.'\s*[ ,]\s*'.$b.'\s*(?:[\/,]\s*(?:1(?:\.0+)?))?\s*\)$~i';
     }
 
     public function testPageRendersWithAssetMapperCSS(): void
@@ -87,7 +91,7 @@ final class AssetMapperE2ETest extends PlaywrightTestCase
         // Verify the CSS link is present in the page (link elements are not visible; check presence)
         $cssLink = $this->page->locator('link[rel="stylesheet"]');
         self::assertTrue($cssLink->count() > 0, 'Expected at least one stylesheet <link> element');
-        
+
         $href = $cssLink->getAttribute('href');
         self::assertNotNull($href);
         $path = parse_url($href, PHP_URL_PATH) ?? $href;
@@ -118,7 +122,7 @@ final class AssetMapperE2ETest extends PlaywrightTestCase
 
         // Verify CSS styles are applied by checking computed styles
         $backgroundColor = $styledBox->evaluate('el => window.getComputedStyle(el).backgroundColor');
-        
+
         // The blue color (#3498db) should be applied
         // RGB values: rgb(52, 152, 219) or rgba(52, 152, 219, 1)
         self::assertMatchesRegularExpression(
@@ -167,7 +171,7 @@ final class AssetMapperE2ETest extends PlaywrightTestCase
 
         // Check font size
         $fontSize = $message->evaluate('el => window.getComputedStyle(el).fontSize');
-        
+
         // Should be 1.2rem which typically computes to around 19.2px (depending on base font size)
         self::assertMatchesRegularExpression(
             '/19\.2px|1\.2rem/',
@@ -182,11 +186,11 @@ final class AssetMapperE2ETest extends PlaywrightTestCase
 
         // Verify proper HTML structure
         self::assertSame('AssetMapper Demo', $this->page->title());
-        
+
         // Check viewport meta tag
         $viewport = $this->page->locator('meta[name="viewport"]');
         self::assertTrue($viewport->count() > 0);
-        
+
         // Verify UTF-8 charset
         $charset = $this->page->locator('meta[charset="UTF-8"]');
         self::assertTrue($charset->count() > 0);
@@ -196,12 +200,12 @@ final class AssetMapperE2ETest extends PlaywrightTestCase
     {
         $this->visit('/assetmapper');
 
-        $screenshotDir = __DIR__ . '/../Fixtures/App/var/screenshots';
+        $screenshotDir = __DIR__.'/../Fixtures/App/var/screenshots';
         if (!is_dir($screenshotDir) && !@mkdir($screenshotDir, 0777, true) && !is_dir($screenshotDir)) {
             self::fail(sprintf('Unable to create screenshot directory at %s', $screenshotDir));
         }
 
-        $screenshotPath = $screenshotDir . '/assetmapper-demo.png';
+        $screenshotPath = $screenshotDir.'/assetmapper-demo.png';
 
         @unlink($screenshotPath);
 

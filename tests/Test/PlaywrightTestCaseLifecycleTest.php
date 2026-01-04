@@ -3,9 +3,13 @@
 declare(strict_types=1);
 
 /*
- * This file is part of the playwright-php/playwright package.
- * For the full copyright and license information, please view
- * the LICENSE file that was distributed with this source code.
+ * This file is part of the community-maintained Playwright PHP project.
+ * It is not affiliated with or endorsed by Microsoft.
+ *
+ * (c) 2025-Present - Playwright PHP <https://github.com/playwright-php>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
  */
 
 namespace Playwright\Symfony\Tests\Test;
@@ -40,7 +44,7 @@ class PlaywrightTestCaseLifecycleTest extends TestCase
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage("Property 'unknown' does not exist");
 
-        /** @phpstan-ignore-next-line - accessing undefined property intentionally */
+        /* @phpstan-ignore-next-line - accessing undefined property intentionally */
         $this->testCase->unknown;
     }
 
@@ -118,4 +122,3 @@ class PlaywrightTestCaseLifecycleTest extends TestCase
         $this->assertTrue($this->browser->stopped);
     }
 }
-

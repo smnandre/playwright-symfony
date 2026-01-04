@@ -3,9 +3,13 @@
 declare(strict_types=1);
 
 /*
- * This file is part of the playwright-php/playwright package.
- * For the full copyright and license information, please view
- * the LICENSE file that was distributed with this source code.
+ * This file is part of the community-maintained Playwright PHP project.
+ * It is not affiliated with or endorsed by Microsoft.
+ *
+ * (c) 2025-Present - Playwright PHP <https://github.com/playwright-php>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
  */
 
 namespace Playwright\Symfony\Tests\Fixtures\App\Controller;
@@ -17,11 +21,11 @@ final class NavigationController
     public function navigate(string $path = ''): Response
     {
         // The path represents the history of clicks (e.g., "1", "12", "121", etc.)
-        $history = $path === '' ? '' : $path;
+        $history = '' === $path ? '' : $path;
 
         // Build the two navigation links (with trailing slash for Symfony routing)
-        $link1 = '/' . $history . '1/';
-        $link2 = '/' . $history . '2/';
+        $link1 = '/'.$history.'1/';
+        $link2 = '/'.$history.'2/';
 
         $html = <<<HTML
 <!DOCTYPE html>

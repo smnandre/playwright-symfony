@@ -1,5 +1,16 @@
 <?php
+
 declare(strict_types=1);
+
+/*
+ * This file is part of the community-maintained Playwright PHP project.
+ * It is not affiliated with or endorsed by Microsoft.
+ *
+ * (c) 2025-Present - Playwright PHP <https://github.com/playwright-php>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
 
 namespace Playwright\Symfony\Asset;
 
@@ -26,7 +37,7 @@ final class AssetMapperProxy implements AssetLocatorInterface
             return null;
         }
 
-        $normalizedPath = '/' . ltrim($requestPath, '/');
+        $normalizedPath = '/'.ltrim($requestPath, '/');
         $asset = $this->findAssetByPublicPath($normalizedPath);
 
         if (!$asset) {
@@ -85,7 +96,7 @@ final class AssetMapperProxy implements AssetLocatorInterface
 
         $this->assetIndex = [];
 
-        if (!method_exists($this->mapper, 'allAssets')) {
+        if (null === $this->mapper || !method_exists($this->mapper, 'allAssets')) {
             return $this->assetIndex;
         }
 

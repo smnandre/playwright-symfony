@@ -2,6 +2,16 @@
 
 declare(strict_types=1);
 
+/*
+ * This file is part of the community-maintained Playwright PHP project.
+ * It is not affiliated with or endorsed by Microsoft.
+ *
+ * (c) 2025-Present - Playwright PHP <https://github.com/playwright-php>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
 namespace Playwright\Symfony\Asset;
 
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -12,24 +22,22 @@ use Symfony\Component\Routing\RouterInterface;
 class AssetMapperPlaywrightBridge
 {
     private KernelBrowser $kernelBrowser;
-
-    private RouterInterface $router;
-
     private string $assetPublicDir;
 
     public function __construct(
         KernelBrowser $kernelBrowser,
-        RouterInterface $router,
-        string $projectDir
+        string $projectDir,
     ) {
         $this->kernelBrowser = $kernelBrowser;
-        $this->router = $router;
         $this->assetPublicDir = rtrim($projectDir, '/').'/public/';
     }
 
     public function handleAssetRequest(string $url): ?Response
     {
         $path = parse_url($url, PHP_URL_PATH);
+        if (false === $path) {
+            return null;
+        }
 
         if (!$this->isAssetPath($path)) {
             return null;
@@ -73,7 +81,7 @@ class AssetMapperPlaywrightBridge
             || str_starts_with($path, '/build/');
     }
 
-    private function resolveAssetPath(string $path): ?string
+    private function resolveAssetPath(string $path): string
     {
         $path = ltrim($path, '/');
 

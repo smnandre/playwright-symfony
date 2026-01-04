@@ -2,6 +2,16 @@
 
 declare(strict_types=1);
 
+/*
+ * This file is part of the community-maintained Playwright PHP project.
+ * It is not affiliated with or endorsed by Microsoft.
+ *
+ * (c) 2025-Present - Playwright PHP <https://github.com/playwright-php>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
 namespace Playwright\Symfony\Client\Interception;
 
 /**
@@ -44,8 +54,9 @@ final class AssetServer
             return false;
         }
 
-        $path = parse_url($url, PHP_URL_PATH) ?? '';
-        if ('' === $path) {
+        $path = parse_url($url, PHP_URL_PATH);
+        
+        if (false === $path || null === $path || '' === $path) {
             return false;
         }
 
@@ -65,8 +76,9 @@ final class AssetServer
      */
     public function handle(string $url, string $method = 'GET'): ?array
     {
-        $path = parse_url($url, PHP_URL_PATH) ?? '';
-        if ('' === $path) {
+        $path = parse_url($url, PHP_URL_PATH);
+        
+        if (false === $path || null === $path || '' === $path) {
             return null;
         }
 

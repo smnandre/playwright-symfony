@@ -3,16 +3,20 @@
 declare(strict_types=1);
 
 /*
- * This file is part of the playwright-php/playwright package.
- * For the full copyright and license information, please view
- * the LICENSE file that was distributed with this source code.
+ * This file is part of the community-maintained Playwright PHP project.
+ * It is not affiliated with or endorsed by Microsoft.
+ *
+ * (c) 2025-Present - Playwright PHP <https://github.com/playwright-php>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
  */
 
 namespace Playwright\Symfony\Client;
 
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * Converts Symfony responses to Playwright fulfill options.
@@ -25,6 +29,9 @@ use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
  */
 class ResponseConverter
 {
+    /**
+     * @return array<string, mixed>
+     */
     public function prepareFulfillOptions(SymfonyResponse $response): array
     {
         // Normalize and prepare headers
@@ -35,9 +42,9 @@ class ResponseConverter
         $body = $response->getContent();
 
         // BinaryFileResponse does not expose content via getContent()
-        if ((null === $body || $body === '') && $response instanceof BinaryFileResponse) {
+        if ((false === $body || '' === $body) && $response instanceof BinaryFileResponse) {
             $file = $response->getFile();
-            $path = method_exists($file, 'getPathname') ? $file->getPathname() : (string) $file;
+            $path = $file->getPathname();
             $body = @file_get_contents($path) ?: '';
             // Ensure we have a sane content type even if missing
             if (!$contentType) {
@@ -59,7 +66,7 @@ class ResponseConverter
         }
 
         // StreamedResponse outputs directly in sendContent(). Capture it.
-        if ((null === $body || $body === '') && $response instanceof StreamedResponse) {
+        if ((false === $body || '' === $body) && $response instanceof StreamedResponse) {
             $level = ob_get_level();
             ob_start();
             try {
@@ -95,16 +102,28 @@ class ResponseConverter
         return $options;
     }
 
+    /**
+     * @param array<string, list<string|null>|string|null> $headers
+     * @return array<string, string>
+     */
     public function formatHeaders(array $headers): array
     {
         $formatted = [];
         foreach ($headers as $name => $values) {
-            $formatted[$name] = is_array($values) ? implode(', ', $values) : $values;
+            if (is_array($values)) {
+                $formatted[$name] = implode(', ', array_filter($values, fn($v) => null !== $v));
+            } else {
+                $formatted[$name] = (string) $values;
+            }
         }
 
         return $formatted;
     }
 
+    /**
+     * @param array<string, string> $headers
+     * @return array<string, string>
+     */
     private function stripContentLength(array $headers): array
     {
         // Remove content-length as it may be stale when we construct body here
@@ -113,6 +132,7 @@ class ResponseConverter
                 unset($headers[$k]);
             }
         }
+
         return $headers;
     }
 
