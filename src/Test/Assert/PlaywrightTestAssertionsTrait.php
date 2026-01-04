@@ -14,6 +14,8 @@ declare(strict_types=1);
 
 namespace Playwright\Symfony\Test\Assert;
 
+use Playwright\Page\PageInterface;
+
 /**
  * @author Simon André <smn.andre@gmail.com>
  */
@@ -21,51 +23,51 @@ trait PlaywrightTestAssertionsTrait
 {
     protected function assertPageContains(string $text): void
     {
-        $content = $this->page->content();
+        $content = $this->getPage()->content() ?? '';
         $this->assertStringContainsString($text, $content);
     }
 
     protected function assertPageNotContains(string $text): void
     {
-        $content = $this->page->content();
+        $content = $this->getPage()->content() ?? '';
         $this->assertStringNotContainsString($text, $content);
     }
 
     protected function assertSelectorExists(string $selector): void
     {
-        $element = $this->page->locator($selector);
-        $this->assertNotNull($element, "Selector '$selector' not found");
+        $count = $this->getPage()->locator($selector)->count();
+        $this->assertGreaterThan(0, $count, "Selector '$selector' not found");
     }
 
     protected function assertSelectorNotExists(string $selector): void
     {
-        $count = $this->page->locator($selector)->count();
+        $count = $this->getPage()->locator($selector)->count();
         $this->assertSame(0, $count, "Selector '$selector' should not exist");
     }
 
     protected function click(string $selector): void
     {
-        $this->page->click($selector);
+        $this->getPage()->locator($selector)->click();
     }
 
     protected function fill(string $selector, string $value): void
     {
-        $this->page->fill($selector, $value);
+        $this->getPage()->locator($selector)->fill($value);
     }
 
     protected function select(string $selector, string $value): void
     {
-        $this->page->selectOption($selector, $value);
+        $this->getPage()->locator($selector)->selectOption($value);
     }
 
     protected function check(string $selector): void
     {
-        $this->page->check($selector);
+        $this->getPage()->locator($selector)->check();
     }
 
     protected function uncheck(string $selector): void
     {
-        $this->page->uncheck($selector);
+        $this->getPage()->locator($selector)->uncheck();
     }
 
     /**
@@ -73,11 +75,16 @@ trait PlaywrightTestAssertionsTrait
      */
     protected function waitForSelector(string $selector, array $options = []): void
     {
-        $this->page->waitForSelector($selector, $options);
+        $this->getPage()->waitForSelector($selector, $options);
     }
 
     protected function screenshot(string $path): void
     {
-        $this->page->screenshot(['path' => $path]);
+        $this->getPage()->screenshot($path);
     }
+
+    /**
+     * Must be implemented by the class using this trait.
+     */
+    abstract protected function getPage(): PageInterface;
 }

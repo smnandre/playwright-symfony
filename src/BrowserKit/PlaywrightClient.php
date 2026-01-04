@@ -88,7 +88,6 @@ final class PlaywrightClient extends AbstractBrowser
 
     protected function doRequest($request): BrowserKitResponse
     {
-
         $method = strtoupper($request->getMethod());
         $uri = (string) $request->getUri();
 

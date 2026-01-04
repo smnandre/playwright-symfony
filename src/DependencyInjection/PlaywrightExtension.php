@@ -107,6 +107,10 @@ final class PlaywrightExtension extends Extension
         $browserServiceIds = [];
 
         foreach ($browsersConfig as $name => $cfg) {
+            if (!is_array($cfg)) {
+                continue;
+            }
+
             $serviceId = sprintf('playwright.browser.%s', $name);
 
             // Build PlaywrightConfig definition from array config
@@ -119,9 +123,10 @@ final class PlaywrightExtension extends Extension
             // Create BrowserContextInterface via factory - ready-to-use browser context
             $browserContextDef = new Definition(BrowserContextInterface::class);
             $browserContextDef->setFactory([self::class, 'createBrowserContext']);
+            $browserType = $cfg['type'] ?? 'chromium';
             $browserContextDef->setArguments([
                 new Reference($serviceId.'.config'),
-                $cfg['type'] ?? 'chromium', // Pass the browser type string for the factory
+                is_string($browserType) ? $browserType : 'chromium',
             ]);
 
             $container->setDefinition($serviceId, $browserContextDef);
@@ -155,7 +160,11 @@ final class PlaywrightExtension extends Extension
             'firefox' => BrowserType::FIREFOX,
             'webkit' => BrowserType::WEBKIT,
         ];
-        $browserEnum = $browserMap[$browserType] ?? BrowserType::CHROMIUM;
+        $browserTypeKey = is_string($browserType) ? $browserType : 'chromium';
+        $browserEnum = $browserMap[$browserTypeKey] ?? BrowserType::CHROMIUM;
+
+        $tracing = is_array($cfg['tracing'] ?? null) ? $cfg['tracing'] : [];
+        $proxy = is_array($cfg['proxy'] ?? null) ? $cfg['proxy'] : null;
 
         $args = [
             $cfg['node_path'] ?? null,
@@ -170,15 +179,15 @@ final class PlaywrightExtension extends Extension
             $cfg['downloads_dir'] ?? null,
             $cfg['videos_dir'] ?? null,
             $cfg['screenshot_dir'] ?? null,
-            $cfg['tracing']['enabled'] ?? false,
-            $cfg['tracing']['dir'] ?? null,
-            $cfg['tracing']['screenshots'] ?? false,
-            $cfg['tracing']['snapshots'] ?? false,
-            isset($cfg['proxy']) ? array_filter([
-                'server' => $cfg['proxy']['server'] ?? null,
-                'username' => $cfg['proxy']['username'] ?? null,
-                'password' => $cfg['proxy']['password'] ?? null,
-                'bypass' => $cfg['proxy']['bypass'] ?? null,
+            $tracing['enabled'] ?? false,
+            $tracing['dir'] ?? null,
+            $tracing['screenshots'] ?? false,
+            $tracing['snapshots'] ?? false,
+            null !== $proxy ? array_filter([
+                'server' => $proxy['server'] ?? null,
+                'username' => $proxy['username'] ?? null,
+                'password' => $proxy['password'] ?? null,
+                'bypass' => $proxy['bypass'] ?? null,
             ], static fn ($v) => null !== $v && '' !== $v) : null,
             null, // logger is injected by factory argument, not here
         ];
@@ -204,7 +213,7 @@ final class PlaywrightExtension extends Extension
         ];
 
         // Remove null/empty values
-        $launchOptions = array_filter($launchOptions, static fn (mixed $value): bool => $value !== null && $value !== []);
+        $launchOptions = array_filter($launchOptions, static fn (mixed $value): bool => null !== $value && [] !== $value);
 
         return match ($browserType) {
             'firefox' => Playwright::firefox($launchOptions),

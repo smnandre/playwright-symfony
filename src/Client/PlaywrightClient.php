@@ -129,7 +129,6 @@ class PlaywrightClient extends AbstractBrowser
         }
 
         /** @var array{name: string, value: string, url?: string, domain?: string, path?: string, expires?: int, httpOnly?: bool, secure?: bool, sameSite?: 'Lax'|'None'|'Strict'} $cookie */
-
         $context = $this->browser->getContext();
 
         if (null === $context) {

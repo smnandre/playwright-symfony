@@ -145,12 +145,17 @@ abstract class PlaywrightTestCase extends KernelTestCase
         return $this->client->visit($path);
     }
 
-    protected function getPage(): ?PageInterface
+    protected function getPage(): PageInterface
     {
-        return $this->client->getPage();
+        $page = $this->client->getPage();
+        if (null === $page) {
+            throw new \RuntimeException('No page available. Browser may not be started.');
+        }
+
+        return $page;
     }
 
-    // Property accessor for the trait
+    // Magic property support for $page
     public function __get(string $name): mixed
     {
         if ('page' === $name) {
@@ -161,8 +166,6 @@ abstract class PlaywrightTestCase extends KernelTestCase
 
     public function __set(string $name, mixed $value): void
     {
-        // We intentionally expose a read-only magic property for DX ($this->page).
-        // Any writes should fail loudly.
         throw new \InvalidArgumentException("Property '$name' is read-only or does not exist");
     }
 
@@ -338,7 +341,7 @@ abstract class PlaywrightTestCase extends KernelTestCase
         $hosts = $this->getContainerParam('playwright.intercepted_hosts');
 
         if (is_array($hosts) && !empty($hosts)) {
-            /** @var string[] */
+            /* @var string[] */
             return $hosts;
         }
 

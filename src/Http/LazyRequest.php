@@ -23,6 +23,9 @@ use Playwright\Network\ResponseInterface;
  */
 class LazyRequest implements RequestInterface
 {
+    /**
+     * @param array<string, mixed> $data
+     */
     public function __construct(
         private readonly array $data,
     ) {
@@ -89,7 +92,7 @@ class LazyRequest implements RequestInterface
             return null;
         }
 
-        /** @var array<string, mixed> */
+        /* @var array<string, mixed> */
         return $decoded;
     }
 
