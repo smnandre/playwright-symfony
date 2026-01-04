@@ -111,11 +111,13 @@ final class PlaywrightExtension extends Extension
                 continue;
             }
 
+            /** @var array<string, mixed> $browserConfig */
+            $browserConfig = $cfg;
             $serviceId = sprintf('playwright.browser.%s', $name);
 
             // Build PlaywrightConfig definition from array config
             $configDef = new Definition(PlaywrightConfig::class);
-            $configArgs = $this->mapBrowserConfigArgs($cfg);
+            $configArgs = $this->mapBrowserConfigArgs($browserConfig);
             $configDef->setArguments($configArgs);
 
             $container->setDefinition($serviceId.'.config', $configDef);
@@ -213,7 +215,7 @@ final class PlaywrightExtension extends Extension
         ];
 
         // Remove null/empty values
-        $launchOptions = array_filter($launchOptions, static fn (mixed $value): bool => null !== $value && [] !== $value);
+        $launchOptions = array_filter($launchOptions, static fn (mixed $value): bool => [] !== $value);
 
         return match ($browserType) {
             'firefox' => Playwright::firefox($launchOptions),

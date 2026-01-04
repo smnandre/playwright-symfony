@@ -341,8 +341,12 @@ abstract class PlaywrightTestCase extends KernelTestCase
         $hosts = $this->getContainerParam('playwright.intercepted_hosts');
 
         if (is_array($hosts) && !empty($hosts)) {
-            /* @var string[] */
-            return $hosts;
+            // Filter to ensure all values are strings
+            $stringHosts = array_filter($hosts, 'is_string');
+            if (!empty($stringHosts)) {
+                /** @var string[] $stringHosts */
+                return array_values($stringHosts);
+            }
         }
 
         return $defaultHosts;
