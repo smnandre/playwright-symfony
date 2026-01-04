@@ -600,3 +600,4 @@ Validate that in-process kernel routing works correctly - browser requests → S
 - [ ] Check routes load properly
 
 ### Progress
+- [⏳] Checking existing test coverage for request handling...
