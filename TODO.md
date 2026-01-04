@@ -189,15 +189,22 @@
   - Assert assets load with correct paths
 
 ### 3.2 Cookie & Session Management
-- [ ] **Cookie handling**
-  - Test `setCookie()` sets browser cookie correctly
-  - Test cookies persist across requests
-  - Test `clearCookies()` removes all cookies
-  - Test CSRF token handling if applicable
+- [x] **Cookie handling** ✅ **COMPLETED** (7 tests)
+  - ✅ Test `setCookie()` sets browser cookie correctly
+  - ✅ Test cookies persist across requests
+  - ✅ Test `clearCookie()` removes specific cookie
+  - ✅ Test `clearCookies()` removes all cookies
+  - ✅ Test `getCookie()` returns null for non-existent cookies
+  - ✅ Test multiple cookies handling
+  - ✅ Test cookies with special characters
 
-- [ ] **Session storage**
-  - Verify sessions properly stored/retrieved
-  - Test session data available in controller
+- [x] **Session storage** ✅ **COMPLETED** (3 tests)
+  - ✅ Verify sessions properly stored/retrieved
+  - ✅ Test session data available in controller
+  - ✅ Test session persistence across requests
+  - ✅ Test session clear removes data
+
+**CookieSessionE2ETest.php: 10 tests, 33 assertions, 0 failures** 🎉
 
 ### 3.3 Request/Response Inspection
 - [x] **Inspect intercepted requests** ✅ **COMPLETED** (5 tests)
@@ -736,3 +743,19 @@ Twig rendering in same-process kernel is **FULLY FUNCTIONAL**:
 - Full Symfony+Twig integration verified
 
 **Marking section 2.2 as COMPLETE** ✅
+
+---
+
+## 🔄 Current Work: Section 3.2 - Cookie & Session Management (Started 2026-01-04 16:15)
+
+### Goal
+Validate cookie and session handling in the Playwright+Symfony integration.
+
+### Tasks
+- [ ] Test setCookie() functionality
+- [ ] Test cookie persistence across requests
+- [ ] Test clearCookies()
+- [ ] Test session storage and retrieval
+- [ ] Test session data in controllers
+
+### Progress
