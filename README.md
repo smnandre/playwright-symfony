@@ -150,7 +150,7 @@ PLAYWRIGHT_E2E=1 PLAYWRIGHT_HEADLESS=false vendor/bin/phpunit tests/E2E
 
 ## Usage Notes
 
-- `PlaywrightTestCase` drives a real browser. Calling `request()` (the traditional BrowserKit API) on the underlying client will throw—always navigate with `visit()`/Playwright APIs instead. If you need classic BrowserKit semantics, autowire [`Playwright\Symfony\BrowserKit\PlaywrightBrowser`](docs/bridge/browserkit.md) from the container; it reuses the bundle’s Playwright context.
+- `PlaywrightTestCase` drives a real browser. Calling `request()` (the traditional BrowserKit API) on the underlying client will throw—always navigate with `visit()`/Playwright APIs instead. If you need classic BrowserKit semantics, autowire [`Playwright\Symfony\BrowserKit\PlaywrightClient`](docs/bridge/browserkit.md) from the container; it reuses the bundle’s Playwright context.
 - Set `PLAYWRIGHT_BASE_URL` (or the `playwright.base_url` config) to match the hostnames you intercept; this also controls which cookies are set when calling helper methods like `authenticate()`.
 
 ## Asset Dev Server
