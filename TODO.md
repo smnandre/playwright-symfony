@@ -525,3 +525,13 @@ Verify BrowserKit bridge compatibility and document which methods work vs limita
   - ✅ Has doRequest() - handles navigation, forms, links
   - ✅ Supports cookies via CookieJarSync
   - 🔍 Checking what BrowserKit methods are implemented...
+
+- [✅] PlaywrightBrowser BrowserKit Methods:
+  - ✅ `doRequest()` - Handles GET/HEAD navigation and form submission
+  - ✅ `click(Link)` - Clicks links using Playwright locator
+  - ✅ `submit(Form)` - Submits forms with real browser semantics
+  - ✅ `getPage()` - Access to underlying Playwright page
+  - ✅ Returns `Crawler` for DOM traversal
+  - ✅ Cookie synchronization with CookieJarSync
+  
+- [⏳] Testing BrowserKit bridge functionality...
