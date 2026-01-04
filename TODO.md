@@ -668,3 +668,4 @@ Verify that Twig templates render correctly in the same process with full Symfon
 - [ ] Check if test controllers with templates exist
 
 ### Progress
+- [⏳] Searching for existing Twig templates and controllers...
