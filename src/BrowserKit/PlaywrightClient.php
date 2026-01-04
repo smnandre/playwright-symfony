@@ -207,16 +207,23 @@ JS,
         }
 
         foreach ($files as $name => $path) {
-            $locator = $this->page->locator('input[type="file"][name="'.addslashes((string) $name).'"]');
+            $nameStr = is_string($name) ? $name : (string) $name;
+            $locator = $this->page->locator('input[type="file"][name="'.addslashes($nameStr).'"]');
             if (0 === $locator->count()) {
                 $this->page->evaluate(
                     '(form, name) => { const f = document.createElement("input"); f.type="file"; f.name=name; f.style.display="none"; form.appendChild(f); }',
                     $formHandle,
-                    $name
+                    $nameStr
                 );
             }
-            $filePaths = is_array($path) ? $path : (string) $path;
-            $this->page->locator('input[type="file"][name="'.addslashes((string) $name).'"]')->setInputFiles($filePaths);
+            // Ensure proper type for setInputFiles
+            if (is_array($path)) {
+                /** @var string[] $filePaths */
+                $filePaths = array_values(array_filter(array_map('strval', $path)));
+            } else {
+                $filePaths = is_string($path) ? $path : (string) $path;
+            }
+            $this->page->locator('input[type="file"][name="'.addslashes($nameStr).'"]')->setInputFiles($filePaths);
         }
 
         $this->handlePotentialPopup(fn (): mixed => $this->page->evaluate('(form) => form.requestSubmit ? form.requestSubmit() : form.submit()', $formHandle));
