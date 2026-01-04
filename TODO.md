@@ -614,3 +614,6 @@ Validate that in-process kernel routing works correctly - browser requests → S
 - [⚠️] PlaywrightClientTest: 7/8 passing (1 cookie test failure - known issue)
 
 - [⏳] Running E2E tests to verify end-to-end flow...
+- [✅] HelloE2ETest (GET): **PASSING** (1 test, 1 assertion)
+  - Validates: Browser → Playwright → Symfony kernel → Response → Browser
+  - Confirms in-process routing works
