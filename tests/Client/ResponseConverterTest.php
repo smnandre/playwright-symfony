@@ -134,4 +134,136 @@ class ResponseConverterTest extends TestCase
         $this->assertSame($payload, $opts['body']);
         $this->assertArrayNotHasKey('isBase64', $opts);
     }
+
+    public function testPrepareFulfillOptionsForDifferentStatusCodes(): void
+    {
+        $statusCodes = [
+            200 => 'OK',
+            201 => 'Created',
+            204 => 'No Content',
+            301 => 'Moved Permanently',
+            302 => 'Found',
+            304 => 'Not Modified',
+            400 => 'Bad Request',
+            401 => 'Unauthorized',
+            403 => 'Forbidden',
+            404 => 'Not Found',
+            500 => 'Internal Server Error',
+            502 => 'Bad Gateway',
+            503 => 'Service Unavailable',
+        ];
+
+        foreach ($statusCodes as $code => $reason) {
+            $response = new Response('', $code);
+
+            $opts = $this->converter->prepareFulfillOptions($response);
+
+            $this->assertSame($code, $opts['status'], "Failed for status code {$code}");
+        }
+    }
+
+    public function testPrepareFulfillOptionsStripsContentLengthHeader(): void
+    {
+        $response = new Response('test content', 200, [
+            'content-length' => '999',
+            'Content-Length' => '999',
+            'x-custom' => 'value',
+        ]);
+
+        $opts = $this->converter->prepareFulfillOptions($response);
+
+        $this->assertArrayNotHasKey('content-length', $opts['headers']);
+        $this->assertArrayNotHasKey('Content-Length', $opts['headers']);
+        $this->assertArrayHasKey('x-custom', $opts['headers']);
+    }
+
+    public function testPrepareFulfillOptionsForEmptyResponse(): void
+    {
+        $response = new Response('', 204);
+
+        $opts = $this->converter->prepareFulfillOptions($response);
+
+        $this->assertSame(204, $opts['status']);
+        $this->assertSame('', $opts['body']);
+    }
+
+    public function testPrepareFulfillOptionsForRedirectResponse(): void
+    {
+        $response = new Response('', 302, [
+            'location' => 'https://example.com/redirected',
+        ]);
+
+        $opts = $this->converter->prepareFulfillOptions($response);
+
+        $this->assertSame(302, $opts['status']);
+        $this->assertSame('https://example.com/redirected', $opts['headers']['location']);
+    }
+
+    public function testPrepareFulfillOptionsHandlesMultipleHeaderValues(): void
+    {
+        $response = new Response('', 200, [
+            'x-custom-multi' => ['value1', 'value2'],
+            'vary' => ['Accept', 'Accept-Encoding'],
+        ]);
+
+        $opts = $this->converter->prepareFulfillOptions($response);
+
+        $this->assertSame('value1, value2', $opts['headers']['x-custom-multi']);
+        $this->assertSame('Accept, Accept-Encoding', $opts['headers']['vary']);
+    }
+
+    public function testPrepareFulfillOptionsWithNullContentType(): void
+    {
+        $response = new Response('plain text content', 200);
+        $response->headers->remove('content-type');
+
+        $opts = $this->converter->prepareFulfillOptions($response);
+
+        $this->assertArrayNotHasKey('contentType', $opts);
+        $this->assertSame('plain text content', $opts['body']);
+    }
+
+    public function testFormatHeadersHandlesNullValues(): void
+    {
+        $headers = [
+            'x-present' => 'value',
+            'x-null' => null,
+            'x-array-with-null' => ['a', null, 'b'],
+        ];
+
+        $formatted = $this->converter->formatHeaders($headers);
+
+        $this->assertSame('value', $formatted['x-present']);
+        $this->assertSame('', $formatted['x-null']);
+        $this->assertSame('a, b', $formatted['x-array-with-null']);
+    }
+
+    public function testIsBinaryContentTypeWithCharset(): void
+    {
+        $this->assertFalse($this->converter->isBinaryContentType('text/html; charset=utf-8'));
+        $this->assertFalse($this->converter->isBinaryContentType('application/json; charset=utf-8'));
+        $this->assertTrue($this->converter->isBinaryContentType('image/png; quality=high'));
+    }
+
+    public function testIsBinaryContentTypeWithComplexMimeTypes(): void
+    {
+        $this->assertFalse($this->converter->isBinaryContentType('application/vnd.api+json'));
+        $this->assertFalse($this->converter->isBinaryContentType('application/ld+json'));
+        $this->assertFalse($this->converter->isBinaryContentType('application/hal+xml'));
+        $this->assertTrue($this->converter->isBinaryContentType('application/vnd.ms-excel'));
+    }
+
+    public function testPrepareFulfillOptionsForBinaryResponseWithContentType(): void
+    {
+        $binaryData = random_bytes(32);
+        $response = new Response($binaryData, 200, [
+            'content-type' => 'application/octet-stream',
+        ]);
+
+        $opts = $this->converter->prepareFulfillOptions($response);
+
+        $this->assertTrue($opts['isBase64']);
+        $this->assertSame(base64_encode($binaryData), $opts['body']);
+        $this->assertSame('application/octet-stream', $opts['contentType']);
+    }
 }

@@ -73,6 +73,8 @@ class PlaywrightBrowser
 
     public function getContext(): ?BrowserContextInterface
     {
+        $this->ensureStarted();
+
         return $this->context;
     }
 

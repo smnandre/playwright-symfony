@@ -107,10 +107,13 @@ class PlaywrightClient extends AbstractBrowser
      */
     public function setCookie(string $name, string $value, array $options = []): void
     {
+        // Extract domain from baseUrl if not provided
+        $domain = $options['domain'] ?? parse_url($this->getBaseUrl(), PHP_URL_HOST) ?? 'localhost';
+        
         $cookie = array_merge([
             'name' => $name,
             'value' => $value,
-            'url' => $this->getBaseUrl(),
+            'domain' => $domain,
             'path' => $options['path'] ?? '/',
         ], $options);
 
@@ -119,8 +122,14 @@ class PlaywrightClient extends AbstractBrowser
             $cookie['expires'] = (int) $cookie['expires'];
         }
 
+        $context = $this->browser->getContext();
+        
+        if (null === $context) {
+            throw new \RuntimeException('Browser context is null - browser may not be started');
+        }
+
         /** @var array{name: string, value: string, url?: string, domain?: string, path?: string, expires?: int, httpOnly?: bool, secure?: bool, sameSite?: 'Lax'|'None'|'Strict'} $cookie */
-        $this->browser->getContext()?->addCookies([$cookie]);
+        $context->addCookies([$cookie]);
     }
 
     public function getCookie(string $name, ?string $url = null): ?string
@@ -144,20 +153,12 @@ class PlaywrightClient extends AbstractBrowser
 
     public function clearCookie(string $name, ?string $domain = null, string $path = '/'): void
     {
-        $cookie = [
-            'name' => $name,
-            'value' => '',
-            'path' => $path,
-            'expires' => 0,
-        ];
-
-        if ($domain) {
-            $cookie['domain'] = $domain;
-        } else {
-            $cookie['url'] = $this->getBaseUrl();
+        // Use domain parameter, extract from baseUrl if not provided
+        if (null === $domain) {
+            $domain = parse_url($this->getBaseUrl(), PHP_URL_HOST) ?? 'localhost';
         }
-
-        $this->browser->getContext()?->addCookies([$cookie]);
+        
+        $this->browser->getContext()?->deleteCookie($name, $domain, $path);
     }
 
     /**
