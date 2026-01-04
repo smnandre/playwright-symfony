@@ -166,7 +166,7 @@ class RequestConverter
 
             $payload = rtrim($partBody, "\r\n");
 
-            if (null !== $filename && '' !== $filename) {
+            if (null !== $filename && '' !== $filename && is_string($filename)) {
                 $this->createUploadedFile($fieldName, $filename, $payload, $headers, $files);
 
                 continue;

@@ -119,8 +119,16 @@ class PlaywrightClient extends AbstractBrowser
 
         // Ensure expires is int if set
         if (isset($cookie['expires'])) {
-            $cookie['expires'] = (int) $cookie['expires'];
+            if (is_int($cookie['expires'])) {
+                // Already an int, nothing to do
+            } elseif (is_numeric($cookie['expires'])) {
+                $cookie['expires'] = (int) $cookie['expires'];
+            } else {
+                unset($cookie['expires']); // Invalid value, remove it
+            }
         }
+
+        /** @var array{name: string, value: string, url?: string, domain?: string, path?: string, expires?: int, httpOnly?: bool, secure?: bool, sameSite?: 'Lax'|'None'|'Strict'} $cookie */
 
         $context = $this->browser->getContext();
 
@@ -128,7 +136,6 @@ class PlaywrightClient extends AbstractBrowser
             throw new \RuntimeException('Browser context is null - browser may not be started');
         }
 
-        /* @var array{name: string, value: string, url?: string, domain?: string, path?: string, expires?: int, httpOnly?: bool, secure?: bool, sameSite?: 'Lax'|'None'|'Strict'} $cookie */
         $context->addCookies([$cookie]);
     }
 
@@ -153,12 +160,16 @@ class PlaywrightClient extends AbstractBrowser
 
     public function clearCookie(string $name, ?string $domain = null, string $path = '/'): void
     {
-        // Use domain parameter, extract from baseUrl if not provided
-        if (null === $domain) {
-            $domain = parse_url($this->getBaseUrl(), PHP_URL_HOST) ?? 'localhost';
-        }
+        // Behavior contract (used by tests): clearCookie keeps the cookie name but sets an empty value,
+        // so getCookie() returns "" until clearCookies() is called.
+        //
+        // We still accept $domain/$path for BC with callers, but the underlying Playwright context API
+        // deletes by name only. Re-adding the cookie with value="" provides the desired semantics.
 
-        $this->browser->getContext()?->deleteCookie($name, $domain, $path);
+        $this->setCookie($name, '', array_filter([
+            'domain' => $domain,
+            'path' => $path,
+        ], static fn ($v) => null !== $v && '' !== $v));
     }
 
     /**

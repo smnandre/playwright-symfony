@@ -17,11 +17,13 @@ namespace Playwright\Symfony\BrowserKit;
 use Playwright\Browser\BrowserContextInterface;
 use Playwright\Page\PageInterface;
 use Symfony\Component\BrowserKit\AbstractBrowser;
+use Symfony\Component\BrowserKit\Cookie;
 use Symfony\Component\BrowserKit\CookieJar;
 use Symfony\Component\BrowserKit\History;
 use Symfony\Component\BrowserKit\Request;
 use Symfony\Component\BrowserKit\Response as BrowserKitResponse;
 use Symfony\Component\DomCrawler\Crawler;
+use Symfony\Component\DomCrawler\Field\FormField;
 use Symfony\Component\DomCrawler\Form;
 use Symfony\Component\DomCrawler\Link;
 
@@ -31,6 +33,8 @@ use Symfony\Component\DomCrawler\Link;
  * Notes:
  * - By default, uses "real-browser" semantics for navigation/click/submit.
  * - Builds a DomCrawler snapshot from the live DOM after each action.
+ *
+ * @extends AbstractBrowser<Request, BrowserKitResponse>
  */
 final class PlaywrightClient extends AbstractBrowser
 {
@@ -42,6 +46,9 @@ final class PlaywrightClient extends AbstractBrowser
 
     private bool $followPopups = true;
 
+    /**
+     * @param array<string, mixed> $server
+     */
     public function __construct(
         BrowserContextInterface $context,
         PageInterface $page,
@@ -54,9 +61,12 @@ final class PlaywrightClient extends AbstractBrowser
         $this->context = $context;
         $this->page = $page;
 
-        CookieJarSync::fromContext($this->cookieJar, $this->context);
+        $this->syncCookiesFromContext();
     }
 
+    /**
+     * @param array<string, mixed> $server
+     */
     public static function fromContext(
         BrowserContextInterface $context,
         array $server = [],
@@ -78,7 +88,6 @@ final class PlaywrightClient extends AbstractBrowser
 
     protected function doRequest($request): BrowserKitResponse
     {
-        \assert($request instanceof Request);
 
         $method = strtoupper($request->getMethod());
         $uri = (string) $request->getUri();
@@ -104,22 +113,31 @@ final class PlaywrightClient extends AbstractBrowser
         return $response;
     }
 
+    /**
+     * @param array<string, mixed> $serverParameters
+     */
     public function click(Link $link, array $serverParameters = []): Crawler
     {
         $xpath = XPath::fromDomElement($link->getNode());
         $locator = $this->page->locator('xpath='.$xpath);
-        $this->handlePotentialPopup(static fn (): bool => (bool) $locator->click());
+        $this->handlePotentialPopup(static function () use ($locator): void {
+            $locator->click();
+        });
 
         return $this->refreshSnapshotAndResponse();
     }
 
+    /**
+     * @param array<string, mixed> $values
+     * @param array<string, mixed> $serverParameters
+     */
     public function submit(Form $form, array $values = [], array $serverParameters = []): Crawler
     {
         if (!empty($values)) {
             $form->setValues($values);
         }
 
-        FormInteractor::fill($this->page, $form);
+        $this->fillForm($form);
 
         $this->handlePotentialPopup(function () use ($form): void {
             $xpath = XPath::fromDomElement($form->getNode());
@@ -132,11 +150,11 @@ final class PlaywrightClient extends AbstractBrowser
     private function navigate(string $url): BrowserKitResponse
     {
         $playwrightResponse = $this->page->goto($url, ['waitUntil' => 'load']);
-        $content = $this->page->content();
+        $content = $this->page->content() ?? '';
         $status = $playwrightResponse?->status() ?? 200;
         $headers = $playwrightResponse?->headers() ?? [];
 
-        CookieJarSync::toJarFromUrl($this->cookieJar, $this->context, $this->page->url());
+        $this->syncCookiesFromContext();
 
         return $this->createBrowserKitResponse($content, $status, $headers);
     }
@@ -198,27 +216,28 @@ JS,
                     $name
                 );
             }
-            $this->page->locator('input[type="file"][name="'.addslashes((string) $name).'"]')->setInputFiles($path);
+            $filePaths = is_array($path) ? $path : (string) $path;
+            $this->page->locator('input[type="file"][name="'.addslashes((string) $name).'"]')->setInputFiles($filePaths);
         }
 
         $this->handlePotentialPopup(fn (): mixed => $this->page->evaluate('(form) => form.requestSubmit ? form.requestSubmit() : form.submit()', $formHandle));
 
-        $content = $this->page->content();
+        $content = $this->page->content() ?? '';
         $status = 200;
         $headers = [];
 
-        CookieJarSync::toJarFromUrl($this->cookieJar, $this->context, $this->page->url());
+        $this->syncCookiesFromContext();
 
         return $this->createBrowserKitResponse($content, $status, $headers);
     }
 
     private function refreshSnapshotAndResponse(): Crawler
     {
-        $content = $this->page->content();
+        $content = $this->page->content() ?? '';
         $status = 200;
         $headers = [];
 
-        CookieJarSync::toJarFromUrl($this->cookieJar, $this->context, $this->page->url());
+        $this->syncCookiesFromContext();
         $this->lastResponse = $this->createBrowserKitResponse($content, $status, $headers);
 
         return new Crawler($content, $this->page->url());
@@ -262,5 +281,72 @@ JS,
                 'password' => (string) $server['PHP_AUTH_PW'],
             ]);
         }
+    }
+
+    private function syncCookiesFromContext(): void
+    {
+        foreach ($this->context->cookies() as $cookie) {
+            $this->cookieJar->set(new Cookie(
+                name: $cookie['name'],
+                value: $cookie['value'],
+                expires: $cookie['expires'] ?? null,
+                path: $cookie['path'],
+                domain: $cookie['domain'],
+                secure: $cookie['secure'] ?? false,
+                httponly: $cookie['httpOnly'] ?? true,
+            ));
+        }
+    }
+
+    private function fillForm(Form $form): void
+    {
+        foreach ($form->all() as $field) {
+            $node = $this->getNodeFromField($field);
+
+            $xpath = XPath::fromDomElement($node);
+            $locator = $this->page->locator('xpath='.$xpath);
+            $type = strtolower($node->getAttribute('type'));
+
+            if ('select' === $node->tagName) {
+                $values = $field->getValue();
+                $values = is_array($values) ? $values : [$values];
+                $locator->selectOption($values);
+                continue;
+            }
+
+            if ('checkbox' === $type) {
+                $field->getValue() ? $locator->check() : $locator->uncheck();
+                continue;
+            }
+
+            if ('radio' === $type) {
+                if (null !== $field->getValue()) {
+                    $locator->check();
+                }
+                continue;
+            }
+
+            if ('file' === $type) {
+                $value = $field->getValue();
+                if (!empty($value)) {
+                    $locator->setInputFiles($value);
+                }
+                continue;
+            }
+
+            $value = $field->getValue();
+            $locator->fill(is_string($value) ? $value : '');
+        }
+    }
+
+    private function getNodeFromField(FormField $field): \DOMElement
+    {
+        $reflection = new \ReflectionClass($field);
+        $property = $reflection->getProperty('node');
+        $node = $property->getValue($field);
+
+        \assert($node instanceof \DOMElement);
+
+        return $node;
     }
 }

@@ -68,6 +68,9 @@ trait PlaywrightTestAssertionsTrait
         $this->page->uncheck($selector);
     }
 
+    /**
+     * @param array<string, mixed> $options
+     */
     protected function waitForSelector(string $selector, array $options = []): void
     {
         $this->page->waitForSelector($selector, $options);

@@ -24,6 +24,7 @@ use Playwright\Symfony\Test\Assert\PlaywrightTestAssertionsTrait;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\Request as SymfonyRequest;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
@@ -69,9 +70,9 @@ abstract class PlaywrightTestCase extends KernelTestCase
             ]);
         }
 
-        $interceptedHosts = $this->loadInterceptedHosts();
-
-        $assetServer = $this->resolveAssetServer();
+        if (null === self::$kernel) {
+            throw new \RuntimeException('Kernel must be booted before creating client');
+        }
 
         $this->client = new PlaywrightClient(
             $this->browser,
@@ -79,9 +80,9 @@ abstract class PlaywrightTestCase extends KernelTestCase
             new RequestConverter(),
             new ResponseConverter(),
             [],
-            $interceptedHosts,
+            $this->loadInterceptedHosts(),
             $this,
-            $assetServer,
+            $this->resolveAssetServer(),
             $this->baseUrl,
             $this->playwrightLogger,
             $this->debugLogging,
@@ -158,6 +159,18 @@ abstract class PlaywrightTestCase extends KernelTestCase
         throw new \InvalidArgumentException("Property '$name' does not exist");
     }
 
+    public function __set(string $name, mixed $value): void
+    {
+        // We intentionally expose a read-only magic property for DX ($this->page).
+        // Any writes should fail loudly.
+        throw new \InvalidArgumentException("Property '$name' is read-only or does not exist");
+    }
+
+    public function __isset(string $name): bool
+    {
+        return 'page' === $name;
+    }
+
     /**
      * @param array<string, mixed> $options
      */
@@ -228,10 +241,7 @@ abstract class PlaywrightTestCase extends KernelTestCase
         // Override to load fixtures
     }
 
-    /**
-     * @phpstan-return \Symfony\Component\DependencyInjection\ContainerInterface
-     */
-    private function getTestContainer(): object
+    private function getTestContainer(): ContainerInterface
     {
         if (null === self::$kernel) {
             throw new \RuntimeException('Kernel is not booted');
@@ -240,46 +250,51 @@ abstract class PlaywrightTestCase extends KernelTestCase
         return self::$kernel->getContainer();
     }
 
+    /**
+     * Returns the "test.service_container" if available, otherwise the main container.
+     */
+    private function getPreferredContainer(): ContainerInterface
+    {
+        $container = $this->getTestContainer();
+
+        if ($container->has('test.service_container')) {
+            $testContainer = $container->get('test.service_container');
+            if ($testContainer instanceof ContainerInterface) {
+                return $testContainer;
+            }
+        }
+
+        return $container;
+    }
+
+    private function getContainerParam(string $name): mixed
+    {
+        $container = $this->getPreferredContainer();
+
+        return $container->hasParameter($name) ? $container->getParameter($name) : null;
+    }
+
+    private function getContainerService(string $id): mixed
+    {
+        $container = $this->getPreferredContainer();
+
+        return $container->has($id) ? $container->get($id) : null;
+    }
+
     private function resolveLogger(): LoggerInterface
     {
         if (null === self::$kernel) {
             return new NullLogger();
         }
-        $container = $this->getTestContainer();
 
-        $logger = $this->findLoggerInContainer($container);
-        if (null !== $logger) {
-            return $logger;
-        }
-
-        if ($container->has('test.service_container')) {
-            $testContainer = $container->get('test.service_container');
-            $logger = $this->findLoggerInContainer($testContainer);
-            if (null !== $logger) {
-                return $logger;
+        foreach (['monolog.logger.playwright', 'logger'] as $serviceId) {
+            $candidate = $this->getContainerService($serviceId);
+            if ($candidate instanceof LoggerInterface) {
+                return $candidate;
             }
         }
 
         return new NullLogger();
-    }
-
-    private function findLoggerInContainer(object $container): ?LoggerInterface
-    {
-        if ($container->has('monolog.logger.playwright')) {
-            $candidate = $container->get('monolog.logger.playwright');
-            if ($candidate instanceof LoggerInterface) {
-                return $candidate;
-            }
-        }
-
-        if ($container->has('logger')) {
-            $candidate = $container->get('logger');
-            if ($candidate instanceof LoggerInterface) {
-                return $candidate;
-            }
-        }
-
-        return null;
     }
 
     private function resolveDebugLogging(): bool
@@ -292,20 +307,10 @@ abstract class PlaywrightTestCase extends KernelTestCase
         if (null === self::$kernel) {
             return false;
         }
-        $container = $this->getTestContainer();
 
-        if ($container->hasParameter('playwright.debug_logging')) {
-            return (bool) $container->getParameter('playwright.debug_logging');
-        }
+        $param = $this->getContainerParam('playwright.debug_logging');
 
-        if ($container->has('test.service_container')) {
-            $testContainer = $container->get('test.service_container');
-            if ($testContainer->hasParameter('playwright.debug_logging')) {
-                return (bool) $testContainer->getParameter('playwright.debug_logging');
-            }
-        }
-
-        return false;
+        return null !== $param ? (bool) $param : false;
     }
 
     private function resolveBaseUrl(): string
@@ -314,24 +319,10 @@ abstract class PlaywrightTestCase extends KernelTestCase
         if (null === self::$kernel) {
             return $default;
         }
-        $container = $this->getTestContainer();
 
-        if ($container->hasParameter('playwright.base_url')) {
-            $param = $container->getParameter('playwright.base_url');
+        $param = $this->getContainerParam('playwright.base_url');
 
-            return is_string($param) ? $param : $default;
-        }
-
-        if ($container->has('test.service_container')) {
-            $testContainer = $container->get('test.service_container');
-            if ($testContainer->hasParameter('playwright.base_url')) {
-                $param = $testContainer->getParameter('playwright.base_url');
-
-                return is_string($param) ? $param : $default;
-            }
-        }
-
-        return $default;
+        return is_string($param) ? $param : $default;
     }
 
     /**
@@ -339,16 +330,16 @@ abstract class PlaywrightTestCase extends KernelTestCase
      */
     private function loadInterceptedHosts(): array
     {
-        if (null === self::$kernel) {
-            return ['localhost', '127.0.0.1', 'testapp.local'];
-        }
-        $container = $this->getTestContainer();
         $defaultHosts = ['localhost', '127.0.0.1', 'testapp.local'];
+        if (null === self::$kernel) {
+            return $defaultHosts;
+        }
 
-        if ($container->hasParameter('playwright.intercepted_hosts')) {
-            $hosts = $container->getParameter('playwright.intercepted_hosts');
+        $hosts = $this->getContainerParam('playwright.intercepted_hosts');
 
-            return is_array($hosts) && !empty($hosts) ? $hosts : $defaultHosts;
+        if (is_array($hosts) && !empty($hosts)) {
+            /** @var string[] */
+            return $hosts;
         }
 
         return $defaultHosts;
@@ -359,24 +350,9 @@ abstract class PlaywrightTestCase extends KernelTestCase
         if (null === self::$kernel) {
             return null;
         }
-        $container = $this->getTestContainer();
 
-        if ($container->has(AssetServer::class)) {
-            $service = $container->get(AssetServer::class);
+        $service = $this->getContainerService(AssetServer::class);
 
-            return $service instanceof AssetServer ? $service : null;
-        }
-
-        if ($container->has('test.service_container')) {
-            $testContainer = $container->get('test.service_container');
-
-            if ($testContainer->has(AssetServer::class)) {
-                $service = $testContainer->get(AssetServer::class);
-
-                return $service instanceof AssetServer ? $service : null;
-            }
-        }
-
-        return null;
+        return $service instanceof AssetServer ? $service : null;
     }
 }

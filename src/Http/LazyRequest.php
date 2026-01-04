@@ -85,7 +85,12 @@ class LazyRequest implements RequestInterface
             return null;
         }
 
-        return \is_array($decoded) ? $decoded : null;
+        if (!\is_array($decoded)) {
+            return null;
+        }
+
+        /** @var array<string, mixed> */
+        return $decoded;
     }
 
     public function resourceType(): string

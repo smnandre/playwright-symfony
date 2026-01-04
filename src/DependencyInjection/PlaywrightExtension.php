@@ -94,6 +94,9 @@ final class PlaywrightExtension extends Extension
         return 'playwright';
     }
 
+    /**
+     * @param array<string, mixed> $browsersConfig
+     */
     private function registerBrowsers(ContainerBuilder $container, array $browsersConfig, string $defaultBrowser): void
     {
         // Ensure a default browser exists even if no config provided
@@ -136,6 +139,8 @@ final class PlaywrightExtension extends Extension
     }
 
     /**
+     * @param array<string, mixed> $cfg
+     *
      * @return array<int, mixed>
      */
     private function mapBrowserConfigArgs(array $cfg): array
@@ -199,7 +204,7 @@ final class PlaywrightExtension extends Extension
         ];
 
         // Remove null/empty values
-        $launchOptions = array_filter($launchOptions, fn ($value) => null !== $value && [] !== $value);
+        $launchOptions = array_filter($launchOptions, static fn (mixed $value): bool => $value !== null && $value !== []);
 
         return match ($browserType) {
             'firefox' => Playwright::firefox($launchOptions),
