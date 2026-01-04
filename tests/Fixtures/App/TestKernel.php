@@ -46,6 +46,9 @@ class TestKernel extends BaseKernel
                 'utf8' => true,
                 'strict_requirements' => null,
             ],
+            'session' => [
+                'storage_factory_id' => 'session.storage.factory.mock_file',
+            ],
             'cache' => [
                 'directory' => __DIR__.'/var/playwright-symfony-test-cache',
                 'app' => 'cache.adapter.filesystem',
@@ -126,6 +129,10 @@ class TestKernel extends BaseKernel
 
         $routes->add('assetmapper_trailing', '/assetmapper/')
             ->controller([Controller\AssetMapperController::class, 'demo'])
+            ->methods(['GET']);
+
+        $routes->add('twig_demo', '/twig')
+            ->controller([Controller\TwigDemoController::class, 'demo'])
             ->methods(['GET']);
 
         $routes->add('helper_demo', '/helper-demo')
