@@ -24,6 +24,7 @@
 
     <php>
         <env name="PLAYWRIGHT_BASE_URL" value="http://localhost"/>
+        <env name="KERNEL_CLASS" value="Playwright\Symfony\Tests\Fixtures\App\TestKernel"/>
     </php>
 
 </phpunit>

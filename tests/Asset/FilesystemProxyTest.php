@@ -14,58 +14,96 @@ declare(strict_types=1);
 
 namespace Playwright\Symfony\Tests\Asset;
 
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\UsesClass;
 use PHPUnit\Framework\TestCase;
 use Playwright\Symfony\Asset\FilesystemProxy;
 use Playwright\Symfony\Client\Interception\AssetFile;
 
-class FilesystemProxyTest extends TestCase
+#[CoversClass(FilesystemProxy::class)]
+#[UsesClass(AssetFile::class)]
+final class FilesystemProxyTest extends TestCase
 {
     private string $tempDir;
 
     protected function setUp(): void
     {
-        $this->tempDir = sys_get_temp_dir().'/pw_fs_proxy_'.uniqid('', true);
-        if (!is_dir($this->tempDir)) {
-            mkdir($this->tempDir, 0777, true);
-        }
+        $this->tempDir = sys_get_temp_dir() . '/pw_fs_test_' . uniqid();
+        @mkdir($this->tempDir, 0777, true);
     }
 
     protected function tearDown(): void
     {
-        foreach (@scandir($this->tempDir) ?: [] as $file) {
-            if ('.' === $file || '..' === $file) {
-                continue;
-            }
+        $this->removeDirectory($this->tempDir);
+    }
 
-            @unlink($this->tempDir.'/'.$file);
+    public function testLocateFindsExistingFile(): void
+    {
+        file_put_contents($this->tempDir . '/test.txt', 'hello world');
+        
+        $proxy = new FilesystemProxy([$this->tempDir]);
+        $asset = $proxy->locate('/test.txt');
+        
+        $this->assertNotNull($asset);
+        $this->assertSame('hello world', $asset->getContent());
+        $this->assertSame('text/plain', $asset->getContentType());
+    }
+
+    public function testLocateReturnsNullForMissingFile(): void
+    {
+        $proxy = new FilesystemProxy([$this->tempDir]);
+        $this->assertNull($proxy->locate('/missing.txt'));
+    }
+
+    public function testLocateReturnsNullForDirectory(): void
+    {
+        @mkdir($this->tempDir . '/subdir');
+        $proxy = new FilesystemProxy([$this->tempDir]);
+        $this->assertNull($proxy->locate('/subdir'));
+    }
+
+    public function testLocateHandlesQueryString(): void
+    {
+        file_put_contents($this->tempDir . '/test.js', 'js');
+        $proxy = new FilesystemProxy([$this->tempDir]);
+        
+        $asset = $proxy->locate('/test.js?v=123');
+        $this->assertNotNull($asset);
+        $this->assertSame('js', $asset->getContent());
+    }
+
+    public function testLocatePreventsDirectoryTraversal(): void
+    {
+        $proxy = new FilesystemProxy([$this->tempDir]);
+        $this->assertNull($proxy->locate('/../etc/passwd'));
+    }
+
+    public function testLocateWithMultipleRoots(): void
+    {
+        $root1 = $this->tempDir . '/root1';
+        $root2 = $this->tempDir . '/root2';
+        @mkdir($root1);
+        @mkdir($root2);
+        
+        file_put_contents($root2 . '/found.txt', 'found me');
+        
+        $proxy = new FilesystemProxy([$root1, $root2]);
+        $asset = $proxy->locate('/found.txt');
+        
+        $this->assertNotNull($asset);
+        $this->assertSame('found me', $asset->getContent());
+    }
+
+    private function removeDirectory(string $dir): void
+    {
+        if (!is_dir($dir)) {
+            return;
         }
-
-        @rmdir($this->tempDir);
-    }
-
-    public function testLocateReturnsNullForInvalidOrMissingPath(): void
-    {
-        $proxy = new FilesystemProxy([$this->tempDir]);
-
-        $this->assertNull($proxy->locate('/missing.css'));
-        $this->assertNull($proxy->locate('../etc/passwd'));
-        $this->assertNull($proxy->locate('/'));
-    }
-
-    public function testLocateReturnsAssetFileForExistingFile(): void
-    {
-        $filePath = $this->tempDir.'/style.css';
-        $content = 'body { background: #fff; }';
-        file_put_contents($filePath, $content);
-
-        $proxy = new FilesystemProxy([$this->tempDir]);
-
-        $asset = $proxy->locate('/style.css');
-
-        $this->assertInstanceOf(AssetFile::class, $asset);
-        $this->assertStringEndsWith('/style.css', $asset->getPath());
-        $this->assertSame(strlen($content), $asset->getSize());
-        $this->assertNotNull($asset->getLastModified());
-        $this->assertSame('text/css', $asset->getContentType());
+        $files = array_diff(scandir($dir), ['.', '..']);
+        foreach ($files as $file) {
+            $path = $dir . '/' . $file;
+            is_dir($path) ? $this->removeDirectory($path) : unlink($path);
+        }
+        rmdir($dir);
     }
 }

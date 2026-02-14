@@ -19,6 +19,9 @@ use PHPUnit\Framework\TestCase;
 use Playwright\Symfony\BrowserKit\PlaywrightClient;
 use Playwright\Symfony\Tests\Client\Fixtures\FakeBrowserContext;
 
+/**
+ * @uses \Playwright\Symfony\Util\CookieJarSync
+ */
 #[CoversClass(PlaywrightClient::class)]
 final class PlaywrightClientTest extends TestCase
 {

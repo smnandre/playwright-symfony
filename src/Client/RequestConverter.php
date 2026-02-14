@@ -52,7 +52,7 @@ class RequestConverter
         $lower = array_change_key_case($headers, CASE_LOWER);
         foreach ($headers as $name => $value) {
             $key = strtoupper(str_replace('-', '_', (string) $name));
-            if ('CONTENT_TYPE' === $key || 'CONTENT_LENGTH' === $key) {
+            if ('CONTENT_TYPE' === $key || 'CONTENT_LENGTH' === $key || 'CONTENT_MD5' === $key) {
                 $server[$key] = $value;
             } else {
                 $server['HTTP_'.$key] = $value;
@@ -66,11 +66,11 @@ class RequestConverter
 
         $content = null;
         if ($postData) {
-            $contentType = $lower['content-type'] ?? null;
-            if ($contentType && str_starts_with(strtolower((string) $contentType), 'application/x-www-form-urlencoded')) {
+            $contentType = $lower['content-type'] ?? '';
+            if (str_starts_with(strtolower((string) $contentType), 'application/x-www-form-urlencoded')) {
                 parse_str($postData, $parameters);
                 $content = $postData;
-            } elseif ($contentType && str_starts_with(strtolower((string) $contentType), 'multipart/form-data')) {
+            } elseif (str_starts_with(strtolower((string) $contentType), 'multipart/form-data')) {
                 $content = $postData;
                 $this->parseMultipartFormData((string) $contentType, $postData, $parameters, $files);
             } else {

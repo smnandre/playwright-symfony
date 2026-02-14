@@ -37,6 +37,7 @@ abstract class PlaywrightTestCase extends KernelTestCase
 {
     use PlaywrightTestAssertionsTrait;
 
+    protected static ?PlaywrightBrowser $sharedBrowser = null;
     protected PlaywrightBrowser $browser;
     protected PlaywrightClient $client;
     protected string $baseUrl = 'http://localhost';
@@ -60,11 +61,22 @@ abstract class PlaywrightTestCase extends KernelTestCase
         $this->debugLogging = $this->resolveDebugLogging();
         $this->playwrightLogger = $this->resolveLogger();
 
-        $this->browser = PlaywrightBrowser::fromEnvironment();
-        $this->browser->start();
+        $requestedBrowser = PlaywrightBrowser::fromEnvironment();
+        if (null !== self::$sharedBrowser && !self::$sharedBrowser->equals($requestedBrowser)) {
+            self::$sharedBrowser->stop();
+            self::$sharedBrowser = null;
+        }
+
+        if (null === self::$sharedBrowser) {
+            self::$sharedBrowser = $requestedBrowser;
+            self::$sharedBrowser->start();
+        } else {
+            self::$sharedBrowser->restartContext();
+        }
+        $this->browser = self::$sharedBrowser;
 
         if ($this->debugLogging) {
-            $this->playwrightLogger->info('Started Playwright browser', [
+            $this->playwrightLogger->info('Playwright browser session ready', [
                 'browser' => $this->browser->getBrowserType(),
                 'headless' => $this->browser->isHeadless(),
             ]);
@@ -91,21 +103,21 @@ abstract class PlaywrightTestCase extends KernelTestCase
 
     protected function tearDown(): void
     {
-        try {
-            if (isset($this->browser)) {
-                if ($this->debugLogging) {
-                    $this->playwrightLogger->info('Stopping Playwright browser', [
-                        'browser' => $this->browser->getBrowserType(),
-                    ]);
-                }
-                $this->browser->stop();
-            }
-        } catch (\Throwable $e) {
-            // Ignore browser stop errors during teardown
-        }
+        // We don't stop the browser here anymore to keep it for next tests.
+        // It will be stopped by PHPUnit or manually if needed.
 
         $this->restoreExceptionHandlers();
         parent::tearDown();
+    }
+
+    public static function tearDownAfterClass(): void
+    {
+        if (null !== self::$sharedBrowser) {
+            self::$sharedBrowser->stop();
+            self::$sharedBrowser = null;
+        }
+
+        parent::tearDownAfterClass();
     }
 
     private function restoreExceptionHandlers(): void

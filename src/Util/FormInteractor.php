@@ -1,0 +1,77 @@
+<?php
+
+declare(strict_types=1);
+
+/*
+ * This file is part of the community-maintained Playwright PHP project.
+ * It is not affiliated with or endorsed by Microsoft.
+ *
+ * (c) 2025-Present - Playwright PHP <https://github.com/playwright-php>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
+namespace Playwright\Symfony\Util;
+
+use Playwright\Page\PageInterface;
+use Symfony\Component\DomCrawler\Form;
+
+/**
+ * @internal
+ */
+final class FormInteractor
+{
+    public static function fill(PageInterface $page, Form $form): void
+    {
+        foreach ($form->all() as $field) {
+            $node = self::getNodeFromField($field);
+            $xpath = XPathHelper::buildXPath($node);
+            $locator = $page->locator('xpath='.$xpath);
+
+            $type = strtolower($node->getAttribute('type') ?? '');
+
+            if ($node->tagName === 'select') {
+                $values = $field->getValue();
+                $values = is_array($values) ? $values : [$values];
+                $locator->selectOption($values);
+                continue;
+            }
+
+            if ($type === 'checkbox') {
+                $shouldBeChecked = (bool) $field->getValue();
+                $shouldBeChecked ? $locator->check() : $locator->uncheck();
+                continue;
+            }
+
+            if ($type === 'radio') {
+                if ($field->getValue() !== null) {
+                    $locator->check();
+                }
+                continue;
+            }
+
+            if ($type === 'file') {
+                $value = $field->getValue();
+                if ($value) {
+                    $locator->setInputFiles($value);
+                }
+                continue;
+            }
+
+            // Default: text-like inputs and textarea
+            $locator->fill((string) $field->getValue());
+        }
+    }
+
+    private static function getNodeFromField(mixed $field): \DOMElement
+    {
+        $reflection = new \ReflectionClass($field);
+        $property = $reflection->getProperty('node');
+        $node = $property->getValue($field);
+
+        \assert($node instanceof \DOMElement);
+
+        return $node;
+    }
+}

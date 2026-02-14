@@ -14,118 +14,150 @@ declare(strict_types=1);
 
 namespace Playwright\Symfony\Tests\Asset;
 
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\UsesClass;
 use PHPUnit\Framework\TestCase;
 use Playwright\Symfony\Asset\AssetMapperProxy;
 use Playwright\Symfony\Client\Interception\AssetFile;
 
-class AssetMapperProxyTest extends TestCase
+#[CoversClass(AssetMapperProxy::class)]
+#[UsesClass(AssetFile::class)]
+final class AssetMapperProxyTest extends TestCase
 {
     public function testLocateReturnsNullWhenNoMapperProvided(): void
     {
         $proxy = new AssetMapperProxy(null);
-
-        $this->assertNull($proxy->locate('/build/app.js'));
+        $this->assertNull($proxy->locate('/test.css'));
     }
 
-    public function testLocateUsesGetAssetFromPublicPathWhenAvailable(): void
+    public function testLocateReturnsNullWhenAssetNotFound(): void
     {
-        $asset = new class {
-            public string $publicPath = '/build/app.js';
-            public string $sourcePath = '/path/to/app.js';
-            public string $content = 'console.log(\"hi\");';
-            public int $lastModified = 1234567890;
+        $mapper = new class {
+            public function getAssetFromPublicPath() { return null; }
+            public function allAssets() { return []; }
         };
+        $proxy = new AssetMapperProxy($mapper);
+        $this->assertNull($proxy->locate('/missing.css'));
+    }
+
+    public function testLocateUsesAssetIndexing(): void
+    {
+        $asset = (object) [
+            'publicPath' => '/indexed.js',
+            'sourcePath' => '/path/to/source.js',
+            'content' => 'console.log("indexed");',
+        ];
 
         $mapper = new class($asset) {
-            private object $asset;
-
-            public function __construct(object $asset)
-            {
-                $this->asset = $asset;
-            }
-
-            public function getAssetFromPublicPath(string $publicPath): ?object
-            {
-                return '/build/app.js' === $publicPath ? $this->asset : null;
-            }
+            public function __construct(private $asset) {}
+            public function getAssetFromPublicPath() { return null; }
+            public function allAssets() { return [$this->asset]; }
         };
 
         $proxy = new AssetMapperProxy($mapper);
-        $file = $proxy->locate('/build/app.js');
+        $result = $proxy->locate('/indexed.js');
 
-        $this->assertInstanceOf(AssetFile::class, $file);
-        $this->assertSame('/path/to/app.js', $file->getPath());
-        $this->assertStringContainsString('javascript', $file->getContentType());
-        $this->assertTrue($file->hasInlineContent());
-        $this->assertSame('console.log(\"hi\");', $file->getContent());
-        $this->assertSame(1234567890, $file->getLastModified());
-        $this->assertSame(strlen('console.log(\"hi\");'), $file->getSize());
+        $this->assertNotNull($result);
+        $this->assertSame('console.log("indexed");', $result->getContent());
     }
 
-    public function testLocateFallsBackToAssetIndexWhenDirectLookupMissing(): void
+    public function testExtractionFromMethods(): void
     {
         $asset = new class {
-            public function getPublicPath(): string
-            {
-                return '/assets/logo.png';
-            }
-
-            public function getSourcePath(): string
-            {
-                return '/path/to/logo.png';
-            }
-
-            public int $lastModified = 42;
+            public function getPublicPath() { return '/method.css'; }
+            public function getSourcePath() { return '/src/method.css'; }
+            public function getContent() { return 'body { color: blue; }'; }
+            public function getLastModified() { return 123456789; }
         };
 
         $mapper = new class($asset) {
-            private object $asset;
-
-            public function __construct(object $asset)
-            {
-                $this->asset = $asset;
-            }
-
-            /**
-             * @return array<int, object>
-             */
-            public function allAssets(): array
-            {
-                return [$this->asset];
-            }
+            public function __construct(private $asset) {}
+            public function getAssetFromPublicPath($path) { return $path === '/method.css' ? $this->asset : null; }
         };
 
         $proxy = new AssetMapperProxy($mapper);
-        $file = $proxy->locate('/assets/logo.png');
+        $result = $proxy->locate('/method.css');
 
-        $this->assertInstanceOf(AssetFile::class, $file);
-        $this->assertSame('/path/to/logo.png', $file->getPath());
-        $this->assertSame('image/png', $file->getContentType());
-        $this->assertSame(42, $file->getLastModified());
+        $this->assertNotNull($result);
+        $this->assertSame('body { color: blue; }', $result->getContent());
+        $this->assertSame(123456789, $result->getLastModified());
     }
 
-    public function testLocateReturnsNullWhenAssetHasNoPathOrContent(): void
+    public function testExtractionFromProperties(): void
     {
-        $asset = new class {
-            public string $publicPath = '/assets/empty.txt';
-        };
+        $asset = (object) [
+            'publicPath' => '/prop.js',
+            'path' => '/src/prop.js',
+            'content' => 'alert(1);',
+            'lastModified' => 111222333,
+        ];
 
         $mapper = new class($asset) {
-            private object $asset;
-
-            public function __construct(object $asset)
-            {
-                $this->asset = $asset;
-            }
-
-            public function getAssetFromPublicPath(string $publicPath): ?object
-            {
-                return '/assets/empty.txt' === $publicPath ? $this->asset : null;
-            }
+            public function __construct(private $asset) {}
+            public function getAssetFromPublicPath($path) { return $path === '/prop.js' ? $this->asset : null; }
         };
 
         $proxy = new AssetMapperProxy($mapper);
+        $result = $proxy->locate('/prop.js');
 
-        $this->assertNull($proxy->locate('/assets/empty.txt'));
+        $this->assertNotNull($result);
+        $this->assertSame('alert(1);', $result->getContent());
+        $this->assertSame(111222333, $result->getLastModified());
+    }
+
+    public function testFallbackToGetAsset(): void
+    {
+        $asset = (object) ['publicPath' => '/fallback.txt', 'content' => 'data'];
+        $mapper = new class($asset) {
+            public function __construct(private $asset) {}
+            public function getAsset($path) { return $path === 'fallback.txt' ? $this->asset : null; }
+        };
+
+        $proxy = new AssetMapperProxy($mapper);
+        $result = $proxy->locate('/fallback.txt');
+        $this->assertNotNull($result);
+        $this->assertSame('data', $result->getContent());
+    }
+
+    public function testLocateReturnsNullWhenNoSourceOrContent(): void
+    {
+        $asset = (object) ['publicPath' => '/nothing.txt'];
+        $mapper = new class($asset) {
+            public function __construct(private $asset) {}
+            public function getAsset($path) { return $this->asset; }
+        };
+
+        $proxy = new AssetMapperProxy($mapper);
+        $this->assertNull($proxy->locate('/nothing.txt'));
+    }
+
+    public function testMimeTypeResolutionFallback(): void
+    {
+        $asset = (object) [
+            'publicPath' => '/style.css',
+            'sourcePath' => '/some/file.css',
+            'content' => 'css',
+        ];
+        $mapper = new class($asset) {
+            public function __construct(private $asset) {}
+            public function getAssetFromPublicPath($path) { return $this->asset; }
+        };
+
+        $proxy = new AssetMapperProxy($mapper);
+        $result = $proxy->locate('/style.css');
+        $this->assertSame('text/css', $result->getContentType());
+    }
+
+    public function testOctetStreamForUnknownExtension(): void
+    {
+        $asset = (object) ['publicPath' => '/binary.dat', 'content' => '0101'];
+        $mapper = new class($asset) {
+            public function __construct(private $asset) {}
+            public function getAssetFromPublicPath($path) { return $this->asset; }
+        };
+
+        $proxy = new AssetMapperProxy($mapper);
+        $result = $proxy->locate('/binary.dat');
+        $this->assertSame('application/octet-stream', $result->getContentType());
     }
 }

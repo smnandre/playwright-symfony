@@ -138,6 +138,11 @@ class TestablePlaywrightTestCase extends PlaywrightTestCase
         $this->browser = $browser;
     }
 
+    public static function setSharedBrowser(?PlaywrightBrowser $browser): void
+    {
+        self::$sharedBrowser = $browser;
+    }
+
     public function setTestLogger(LoggerInterface $logger): void
     {
         $this->playwrightLogger = $logger;

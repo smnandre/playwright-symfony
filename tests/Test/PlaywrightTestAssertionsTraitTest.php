@@ -18,20 +18,24 @@ use PHPUnit\Framework\TestCase;
 use Playwright\Locator\LocatorInterface;
 use Playwright\Page\PageInterface;
 use Playwright\Symfony\Test\Assert\PlaywrightTestAssertionsTrait;
+use Symfony\Component\HttpFoundation\Response;
 
 class PlaywrightTestAssertionsTraitTest extends TestCase
 {
     use PlaywrightTestAssertionsTrait;
 
-    private PageInterface $page;
+    private ?PageInterface $page = null;
+    private ?Response $response = null;
 
     protected function setUp(): void
     {
-        $this->page = $this->createMock(PageInterface::class);
+        $this->page = null;
+        $this->response = null;
     }
 
     public function testAssertPageContainsUsesPageContent(): void
     {
+        $this->page = $this->createMock(PageInterface::class);
         $this->page->expects($this->once())
             ->method('content')
             ->willReturn('<html><body>Hello World</body></html>');
@@ -41,6 +45,7 @@ class PlaywrightTestAssertionsTraitTest extends TestCase
 
     public function testAssertPageNotContainsUsesPageContent(): void
     {
+        $this->page = $this->createMock(PageInterface::class);
         $this->page->expects($this->once())
             ->method('content')
             ->willReturn('<html><body>Hello World</body></html>');
@@ -50,6 +55,7 @@ class PlaywrightTestAssertionsTraitTest extends TestCase
 
     public function testAssertSelectorExistsUsesLocator(): void
     {
+        $this->page = $this->createMock(PageInterface::class);
         $locator = $this->createMock(LocatorInterface::class);
         $locator->expects($this->once())->method('count')->willReturn(1);
 
@@ -63,6 +69,7 @@ class PlaywrightTestAssertionsTraitTest extends TestCase
 
     public function testAssertSelectorNotExistsUsesLocator(): void
     {
+        $this->page = $this->createMock(PageInterface::class);
         $locator = $this->createMock(LocatorInterface::class);
         $locator->expects($this->once())->method('count')->willReturn(0);
 
@@ -74,8 +81,69 @@ class PlaywrightTestAssertionsTraitTest extends TestCase
         $this->assertSelectorNotExists('.missing');
     }
 
+    public function testAssertSelectorVisible(): void
+    {
+        $this->page = $this->createMock(PageInterface::class);
+        $locator = $this->createMock(LocatorInterface::class);
+        $locator->expects($this->once())->method('isVisible')->willReturn(true);
+
+        $this->page->expects($this->once())
+            ->method('locator')
+            ->with('.visible')
+            ->willReturn($locator);
+
+        $this->assertSelectorVisible('.visible');
+    }
+
+    public function testAssertSelectorHidden(): void
+    {
+        $this->page = $this->createMock(PageInterface::class);
+        $locator = $this->createMock(LocatorInterface::class);
+        $locator->expects($this->once())->method('isHidden')->willReturn(true);
+
+        $this->page->expects($this->once())
+            ->method('locator')
+            ->with('.hidden')
+            ->willReturn($locator);
+
+        $this->assertSelectorHidden('.hidden');
+    }
+
+    public function testAssertSelectorTextContains(): void
+    {
+        $this->page = $this->createMock(PageInterface::class);
+        $locator = $this->createMock(LocatorInterface::class);
+        $locator->expects($this->once())->method('textContent')->willReturn('The Quick Brown Fox');
+
+        $this->page->expects($this->once())
+            ->method('locator')
+            ->with('.text')
+            ->willReturn($locator);
+
+        $this->assertSelectorTextContains('.text', 'Brown Fox');
+    }
+
+    public function testAssertResponseStatusCode(): void
+    {
+        $this->response = new Response('', 201);
+        $this->assertResponseStatusCode(201);
+    }
+
+    public function testAssertResponseIsSuccessful(): void
+    {
+        $this->response = new Response('', 200);
+        $this->assertResponseIsSuccessful();
+    }
+
+    public function testAssertResponseIsRedirect(): void
+    {
+        $this->response = new Response('', 302);
+        $this->assertResponseIsRedirect();
+    }
+
     public function testInteractionHelpersDelegateToPage(): void
     {
+        $this->page = $this->createMock(PageInterface::class);
         $locator = $this->createMock(LocatorInterface::class);
         $locator->expects($this->once())->method('click');
         $locator->expects($this->once())->method('fill')->with('value');
@@ -106,6 +174,11 @@ class PlaywrightTestAssertionsTraitTest extends TestCase
 
     protected function getPage(): PageInterface
     {
-        return $this->page;
+        return $this->page ?? $this->createMock(PageInterface::class);
+    }
+
+    protected function getLastResponse(): ?Response
+    {
+        return $this->response;
     }
 }

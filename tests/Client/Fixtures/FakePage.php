@@ -60,12 +60,7 @@ class FakePage implements PageInterface
 
     public function locator(string $selector, \Playwright\Locator\Options\LocatorOptions|array $options = []): LocatorInterface
     {
-        return new class implements LocatorInterface {
-            public function __call($n, $a)
-            {
-                return null;
-            }
-        };
+        return new MockLocator($this, $selector);
     }
 
     public function click(string $selector, \Playwright\Page\Options\ClickOptions|array $options = []): PageInterface

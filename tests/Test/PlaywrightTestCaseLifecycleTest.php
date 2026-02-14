@@ -113,12 +113,21 @@ class PlaywrightTestCaseLifecycleTest extends TestCase
         $this->assertTrue(true); // If no exception is thrown, hooks are callable.
     }
 
-    public function testTearDownStopsBrowser(): void
+    public function testTearDownDoesNotStopBrowser(): void
     {
         $this->testCase->setDebugLoggingFlag(true);
 
         $this->testCase->callTearDown();
 
-        $this->assertTrue($this->browser->stopped);
+        $this->assertFalse($this->browser->stopped, 'Browser should NOT be stopped during tearDown anymore');
+    }
+
+    public function testTearDownAfterClassStopsBrowser(): void
+    {
+        TestablePlaywrightTestCase::setSharedBrowser($this->browser);
+
+        TestablePlaywrightTestCase::tearDownAfterClass();
+
+        $this->assertTrue($this->browser->stopped, 'Browser should be stopped during tearDownAfterClass');
     }
 }

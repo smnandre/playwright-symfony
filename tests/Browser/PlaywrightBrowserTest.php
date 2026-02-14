@@ -21,6 +21,22 @@ use Playwright\Symfony\Browser\PlaywrightBrowser;
 #[CoversClass(PlaywrightBrowser::class)]
 class PlaywrightBrowserTest extends TestCase
 {
+    private ?string $originalBrowser;
+
+    protected function setUp(): void
+    {
+        $this->originalBrowser = getenv('PLAYWRIGHT_BROWSER') ?: null;
+    }
+
+    protected function tearDown(): void
+    {
+        if (null === $this->originalBrowser) {
+            putenv('PLAYWRIGHT_BROWSER');
+        } else {
+            putenv('PLAYWRIGHT_BROWSER='.$this->originalBrowser);
+        }
+    }
+
     public function testFromEnvironmentDefaultsToChromiumOnInvalidBrowser(): void
     {
         putenv('PLAYWRIGHT_BROWSER=invalid');

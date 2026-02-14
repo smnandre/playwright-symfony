@@ -32,6 +32,13 @@ use Symfony\Component\HttpFoundation\Request as SymfonyRequest;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
 
+/**
+ * @uses \Playwright\Symfony\Util\CookieJarSync
+ * @uses \Playwright\Symfony\Util\FormInteractor
+ * @uses \Playwright\Symfony\Util\XPathHelper
+ * @uses \Playwright\Symfony\Client\Interception\AssetServer
+ * @uses \Playwright\Symfony\Client\Interception\AssetFile
+ */
 #[CoversClass(PlaywrightClient::class)]
 #[CoversClass(PlaywrightBrowser::class)]
 #[CoversClass(RequestConverter::class)]
@@ -306,8 +313,8 @@ class PlaywrightClientTest extends TestCase
         self::assertSame('bar', $client->getCookie('foo'));
 
         $client->clearCookie('foo');
-        // addCookies with empty value is how clearCookie is implemented; getCookie returns the current value
-        self::assertSame('', $client->getCookie('foo'));
+        // Now returns null for empty value
+        self::assertNull($client->getCookie('foo'));
 
         $client->clearCookies();
         self::assertNull($client->getCookie('foo'));

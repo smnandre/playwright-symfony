@@ -61,7 +61,7 @@ final class PlaywrightClient extends AbstractBrowser
         $this->context = $context;
         $this->page = $page;
 
-        $this->syncCookiesFromContext();
+        \Playwright\Symfony\Util\CookieJarSync::fromContext($this->cookieJar, $this->context);
     }
 
     /**
@@ -117,7 +117,7 @@ final class PlaywrightClient extends AbstractBrowser
      */
     public function click(Link $link, array $serverParameters = []): Crawler
     {
-        $xpath = self::buildXPath($link->getNode());
+        $xpath = \Playwright\Symfony\Util\XPathHelper::buildXPath($link->getNode());
         $locator = $this->page->locator('xpath='.$xpath);
         $this->handlePotentialPopup(static function () use ($locator): void {
             $locator->click();
@@ -136,10 +136,10 @@ final class PlaywrightClient extends AbstractBrowser
             $form->setValues($values);
         }
 
-        $this->fillForm($form);
+        \Playwright\Symfony\Util\FormInteractor::fill($this->page, $form);
 
         $this->handlePotentialPopup(function () use ($form): void {
-            $xpath = self::buildXPath($form->getNode());
+            $xpath = \Playwright\Symfony\Util\XPathHelper::buildXPath($form->getNode());
             $this->page->locator('xpath='.$xpath)->evaluate('el => el.requestSubmit ? el.requestSubmit() : el.submit()');
         });
 
@@ -153,7 +153,7 @@ final class PlaywrightClient extends AbstractBrowser
         $status = $playwrightResponse?->status() ?? 200;
         $headers = $playwrightResponse?->headers() ?? [];
 
-        $this->syncCookiesFromContext();
+        \Playwright\Symfony\Util\CookieJarSync::toJarFromUrl($this->cookieJar, $this->context, $this->page->url());
 
         return $this->createBrowserKitResponse($content, $status, $headers);
     }
@@ -182,57 +182,62 @@ final class PlaywrightClient extends AbstractBrowser
     private function submitSyntheticForm(string $action, string $method, array $params, array $files, string $rawContent): BrowserKitResponse
     {
         $method = strtoupper($method);
-        $formHandle = $this->page->evaluateHandle(
+        $this->page->evaluate(
             <<<'JS'
-(url, method) => {
+({url, method}) => {
   const form = document.createElement('form');
   form.action = url;
   form.method = method;
   form.style.display = 'none';
+  form.id = '__pw_form';
   document.body.appendChild(form);
-  return form;
 }
 JS,
-            $action,
-            $method
+            ['url' => $action, 'method' => $method]
         );
 
         foreach ($params as $name => $value) {
             $this->page->evaluate(
-                '(form, name, value) => { const input = document.createElement("input"); input.name=name; input.value=String(value); form.appendChild(input); }',
-                $formHandle,
-                $name,
-                $value
+                '({name, value}) => { const input = document.createElement("input"); input.name=name; input.value=String(value); document.getElementById("__pw_form").appendChild(input); }',
+                ['name' => $name, 'value' => $value]
             );
         }
 
         foreach ($files as $name => $path) {
-            $nameStr = is_string($name) ? $name : (string) $name;
-            $locator = $this->page->locator('input[type="file"][name="'.addslashes($nameStr).'"]');
+            $locator = $this->page->locator('input[type="file"][name="'.addslashes($name).'"]');
             if (0 === $locator->count()) {
                 $this->page->evaluate(
-                    '(form, name) => { const f = document.createElement("input"); f.type="file"; f.name=name; f.style.display="none"; form.appendChild(f); }',
-                    $formHandle,
-                    $nameStr
+                    '({name}) => { const f = document.createElement("input"); f.type="file"; f.name=name; f.style.display="none"; document.getElementById("__pw_form").appendChild(f); }',
+                    ['name' => $name]
                 );
             }
             // Ensure proper type for setInputFiles
             if (is_array($path)) {
                 /** @var string[] $filePaths */
-                $filePaths = array_values(array_filter(array_map('strval', $path)));
+                $filePaths = array_values(array_filter(array_map(static function (mixed $v): string {
+                    if (is_string($v)) {
+                        return $v;
+                    }
+                    if (is_int($v)) {
+                        return (string) $v;
+                    }
+
+                    return '';
+                }, $path)));
             } else {
-                $filePaths = is_string($path) ? $path : (string) $path;
+                /** @var string $path */
+                $filePaths = (string) $path;
             }
-            $this->page->locator('input[type="file"][name="'.addslashes($nameStr).'"]')->setInputFiles($filePaths);
+            $this->page->locator('input[type="file"][name="'.addslashes($name).'"]')->setInputFiles($filePaths);
         }
 
-        $this->handlePotentialPopup(fn (): mixed => $this->page->evaluate('(form) => form.requestSubmit ? form.requestSubmit() : form.submit()', $formHandle));
+        $this->handlePotentialPopup(fn (): mixed => $this->page->evaluate('() => { const form = document.getElementById("__pw_form"); return form.requestSubmit ? form.requestSubmit() : form.submit(); }'));
 
         $content = $this->page->content() ?? '';
         $status = 200;
         $headers = [];
 
-        $this->syncCookiesFromContext();
+        \Playwright\Symfony\Util\CookieJarSync::toJarFromUrl($this->cookieJar, $this->context, $this->page->url());
 
         return $this->createBrowserKitResponse($content, $status, $headers);
     }
@@ -243,7 +248,7 @@ JS,
         $status = 200;
         $headers = [];
 
-        $this->syncCookiesFromContext();
+        \Playwright\Symfony\Util\CookieJarSync::toJarFromUrl($this->cookieJar, $this->context, $this->page->url());
         $this->lastResponse = $this->createBrowserKitResponse($content, $status, $headers);
 
         return new Crawler($content, $this->page->url());
@@ -257,14 +262,10 @@ JS,
             return;
         }
 
-        $popup = null;
-        $this->page->once('popup', function ($newPage) use (&$popup): void {
-            $popup = $newPage;
+        $popup = $this->page->context()->waitForPopup(function () use ($action): void {
+            $action();
         });
-        $action();
-        if ($popup instanceof PageInterface) {
-            $this->page = $popup;
-        }
+        $this->page = $popup;
     }
 
     private function applyServerParams(Request $request): void
@@ -278,103 +279,18 @@ JS,
             }
         }
         if (!empty($headers)) {
-            $this->context->setExtraHTTPHeaders($headers);
+            if (method_exists($this->context, 'setExtraHTTPHeaders')) {
+                $this->context->setExtraHTTPHeaders($headers);
+            }
         }
 
         if (isset($server['PHP_AUTH_USER'], $server['PHP_AUTH_PW'])) {
-            $this->context->setHttpCredentials([
-                'username' => (string) $server['PHP_AUTH_USER'],
-                'password' => (string) $server['PHP_AUTH_PW'],
-            ]);
+            if (method_exists($this->context, 'setHttpCredentials')) {
+                $this->context->setHttpCredentials([
+                    'username' => (string) $server['PHP_AUTH_USER'],
+                    'password' => (string) $server['PHP_AUTH_PW'],
+                ]);
+            }
         }
-    }
-
-    private function syncCookiesFromContext(): void
-    {
-        foreach ($this->context->cookies() as $cookie) {
-            $this->cookieJar->set(new Cookie(
-                name: $cookie['name'],
-                value: $cookie['value'],
-                expires: $cookie['expires'] ?? null,
-                path: $cookie['path'],
-                domain: $cookie['domain'],
-                secure: $cookie['secure'] ?? false,
-                httponly: $cookie['httpOnly'] ?? true,
-            ));
-        }
-    }
-
-    private function fillForm(Form $form): void
-    {
-        foreach ($form->all() as $field) {
-            $node = $this->getNodeFromField($field);
-
-            $xpath = self::buildXPath($node);
-            $locator = $this->page->locator('xpath='.$xpath);
-            $type = strtolower($node->getAttribute('type'));
-
-            if ('select' === $node->tagName) {
-                $values = $field->getValue();
-                $values = is_array($values) ? $values : [$values];
-                $locator->selectOption($values);
-                continue;
-            }
-
-            if ('checkbox' === $type) {
-                $field->getValue() ? $locator->check() : $locator->uncheck();
-                continue;
-            }
-
-            if ('radio' === $type) {
-                if (null !== $field->getValue()) {
-                    $locator->check();
-                }
-                continue;
-            }
-
-            if ('file' === $type) {
-                $value = $field->getValue();
-                if (!empty($value)) {
-                    $locator->setInputFiles($value);
-                }
-                continue;
-            }
-
-            $value = $field->getValue();
-            $locator->fill(is_string($value) ? $value : '');
-        }
-    }
-
-    private function getNodeFromField(FormField $field): \DOMElement
-    {
-        $reflection = new \ReflectionClass($field);
-        $property = $reflection->getProperty('node');
-        $node = $property->getValue($field);
-
-        \assert($node instanceof \DOMElement);
-
-        return $node;
-    }
-
-    /**
-     * Build a robust absolute XPath for a DOMElement from DomCrawler snapshot.
-     * This mirrors typical DOM to XPath strategies (tag + position among siblings).
-     */
-    private static function buildXPath(\DOMElement $node): string
-    {
-        $segments = [];
-        for ($current = $node; null !== $current && \XML_ELEMENT_NODE === $current->nodeType; $current = $current->parentNode) {
-            $index = 1;
-            for ($sibling = $current->previousSibling; null !== $sibling; $sibling = $sibling->previousSibling) {
-                if (\XML_ELEMENT_NODE === $sibling->nodeType && $sibling->nodeName === $current->nodeName) {
-                    ++$index;
-                }
-            }
-            $segments[] = sprintf('%s[%d]', $current->nodeName, $index);
-        }
-
-        $segments = array_reverse($segments);
-
-        return '//'.implode('/', $segments);
     }
 }

@@ -64,11 +64,31 @@ class PlaywrightBrowser
         $this->page = $this->context->newPage();
     }
 
+    public function equals(self $other): bool
+    {
+        return $this->browserType === $other->browserType
+            && $this->headless === $other->headless
+            && $this->launchOptions === $other->launchOptions;
+    }
+
     public function stop(): void
     {
         $this->context?->close();
         $this->context = null;
         $this->page = null;
+    }
+
+    public function restartContext(): void
+    {
+        if (null !== $this->page) {
+            $this->page->close();
+            $this->page = null;
+        }
+        if (null !== $this->context) {
+            $this->context->close();
+            $this->context = null;
+        }
+        $this->start();
     }
 
     public function getContext(): ?BrowserContextInterface
