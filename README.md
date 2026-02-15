@@ -17,11 +17,11 @@ Run Playwright browser tests while intercepting HTTP requests and routing them t
 Traditional E2E testing requires running a separate web server. This bundle eliminates that overhead:
 
 - **In-Process Request Handling**: HTTP requests from the browser are handled by your Symfony kernel in the same PHP process
+- **DomCrawler Integration**: Use familiar Symfony `Crawler`, `Link`, and `Form` objects while driving a real browser
 - **Full Symfony Integration**: Access services, the profiler, events, and database state during tests
 - **Fast Asset Serving**: Static assets and AssetMapper files bypass the kernel for optimal performance
 - **Real Browser Testing**: Test with Chromium, Firefox, or WebKit using Playwright
-- **Session & Auth Helpers**: Built-in cookie management and authentication helpers
-- **Request Inspection**: Access intercepted HTTP requests and responses in your tests
+- **Shared Browser Session**: Optimized architecture reuses the same browser process across tests for maximum speed
 
 ## Installation
 
@@ -34,14 +34,15 @@ composer require --dev playwright-php/playwright-symfony
 **Requirements:**
 - PHP 8.3+
 - Symfony 7.0+ or 8.0+
-- Node.js 18+ (for Playwright browser communication)
+- Node.js 20+ (for Playwright browser communication)
 
-**Install Playwright browsers:**
+**Install Playwright:**
+
+The bundle includes a helper to set up the Playwright environment and download browsers:
 
 ```bash
-npx playwright install
-# Or install specific browser
-npx playwright install chromium
+vendor/bin/playwright-install
+vendor/bin/playwright-install --browsers
 ```
 
 ### Bundle Setup
@@ -378,24 +379,24 @@ jobs:
           PLAYWRIGHT_HEADLESS: 'true'
 ```
 
-## Comparison with WebTestCase
+## Comparison with other tools
 
-| Feature | WebTestCase | PlaywrightTestCase |
-|---------|-------------|-------------------|
-| Real browser | No | Yes |
-| JavaScript execution | No | Yes |
-| CSS rendering & animations | No | Yes |
-| AJAX & async requests | Limited | Full support |
-| Multiple browser tabs | No | Yes |
-| File downloads | Limited | Yes |
-| Screenshots & videos | No | Yes |
-| Symfony kernel integration | Yes | Yes |
-| Request/response inspection | Yes | Yes |
-| Test speed | Fast | Slower |
+| Feature | WebTestCase | Panther | PlaywrightTestCase |
+|---------|-------------|---------|-------------------|
+| Real browser | No | Yes | Yes |
+| JavaScript execution | No | Yes | Yes |
+| In-process requests | Yes | No | Yes |
+| No external web server | Yes | No | Yes |
+| CSS rendering | No | Yes | Yes |
+| AJAX & async requests | Limited | Full support | Full support |
+| Screenshots & videos | No | Yes | Yes |
+| Performance | Fast | Slow | Fast (optimized) |
 
-**Use WebTestCase for:** API testing, simple form submissions, fast test suites
+**Use WebTestCase for:** API testing, simple form submissions, fast unit-like functional tests.
 
-**Use PlaywrightTestCase for:** Complex UIs, JavaScript-heavy apps, visual regression testing
+**Use Panther for:** Standard Selenium-style E2E testing when you need a real web server.
+
+**Use PlaywrightTestCase for:** Complex UIs, JavaScript-heavy apps, and high-performance E2E testing with full kernel access.
 
 ## Known Limitations
 

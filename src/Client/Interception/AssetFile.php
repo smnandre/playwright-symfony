@@ -16,6 +16,8 @@ namespace Playwright\Symfony\Client\Interception;
 
 /**
  * Value object representing a resolved asset file or inline asset content.
+ *
+ * @author Simon André <smn.andre@gmail.com>
  */
 final class AssetFile
 {

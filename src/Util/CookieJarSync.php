@@ -19,6 +19,7 @@ use Symfony\Component\BrowserKit\Cookie;
 use Symfony\Component\BrowserKit\CookieJar;
 
 /**
+ * @author Simon André <smn.andre@gmail.com>
  * @internal
  */
 final class CookieJarSync

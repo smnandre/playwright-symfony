@@ -49,7 +49,6 @@ abstract class PlaywrightTestCase extends KernelTestCase
         $this->playwrightLogger = new NullLogger();
         $this->debugLogging = false;
 
-        // Skip E2E browser tests unless explicitly enabled
         if ('1' !== getenv('PLAYWRIGHT_E2E')) {
             $this->markTestSkipped('Playwright E2E tests are disabled. Set PLAYWRIGHT_E2E=1 to enable.');
         }

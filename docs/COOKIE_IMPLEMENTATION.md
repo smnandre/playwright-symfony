@@ -83,17 +83,19 @@ Retrieves a cookie value from the browser context.
 
 #### `clearCookie(string $name, ?string $domain = null, string $path = '/'): void`
 
-Removes a specific cookie from the browser context.
+Removes a specific cookie from the browser context by setting its expiration to the past.
 
 **Implementation:**
 ```php
 public function clearCookie(string $name, ?string $domain = null, string $path = '/'): void
 {
-    if (null === $domain) {
-        $domain = parse_url($this->getBaseUrl(), PHP_URL_HOST) ?? 'localhost';
-    }
-    
-    $this->browser->getContext()?->deleteCookie($name, $domain, $path);
+    $options = [
+        'domain' => $domain ?? parse_url($this->getBaseUrl(), PHP_URL_HOST) ?? 'localhost',
+        'path' => $path,
+        'expires' => 0, // Force expiration
+    ];
+
+    $this->setCookie($name, '', $options);
 }
 ```
 

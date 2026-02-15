@@ -2,26 +2,6 @@
 
 Common patterns and solutions for specific testing needs.
 
-## Using Two Separate Clients
-
-Sometimes you need to simulate two different users interacting with your site simultaneously (e.g., a chat application or a peer-to-review process).
-
-```php
-public function testTwoUsersInteraction(): void
-{
-    // User A (The default client provided by the test case)
-    $this->authenticate('alice@example.com');
-    $this->visit('/projects/1');
-
-    // User B (Create a new standalone client)
-    $browserB = $this->browser->getContext()->newPage();
-    $clientB = clone $this->client; // Clones config but needs its own page
-    // Note: Creating a truly separate user session requires a separate BrowserContext
-}
-```
-
-*Better approach for full isolation:* Use named browsers in your configuration.
-
 ## Configure Playwright per Environment
 
 You may want different timeout or `slowmo` settings in CI vs local development.

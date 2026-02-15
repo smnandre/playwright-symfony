@@ -81,12 +81,10 @@ class ResponseConverter
 
         $options = [
             'status' => $response->getStatusCode(),
-            // Let Playwright set proper length based on provided body
             'headers' => $this->stripContentLength($headers),
         ];
 
         if ($contentType) {
-            // Explicitly pass content type to Playwright
             $options['contentType'] = $contentType;
         }
 

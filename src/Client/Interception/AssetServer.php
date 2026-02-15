@@ -19,6 +19,8 @@ namespace Playwright\Symfony\Client\Interception;
  *
  * It is designed to work with Symfony's AssetMapper (via AssetMapperProxy)
  * but can aggregate any number of locators (filesystem, custom resolvers, etc.).
+ *
+ * @author Simon André <smn.andre@gmail.com>
  */
 final class AssetServer
 {

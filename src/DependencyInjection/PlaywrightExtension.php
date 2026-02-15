@@ -18,17 +18,12 @@ use Playwright\Browser\BrowserContextInterface;
 use Playwright\Browser\BrowserType;
 use Playwright\Configuration\PlaywrightConfig;
 use Playwright\Playwright;
-use Playwright\Symfony\Asset\AssetMapperProxy;
-use Playwright\Symfony\Asset\FilesystemProxy;
 use Playwright\Symfony\BrowserKit\PlaywrightClient as BrowserKitClient;
-use Playwright\Symfony\Client\Interception\AssetServer;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
-use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Extension\Extension;
 use Symfony\Component\DependencyInjection\Loader\PhpFileLoader;
-use Symfony\Component\DependencyInjection\Parameter;
 use Symfony\Component\DependencyInjection\Reference;
 
 /**
@@ -103,7 +98,7 @@ final class PlaywrightExtension extends Extension
 
             $container->setDefinition($serviceId.'.config', $configDef);
 
-            // Create BrowserContextInterface via factory - ready-to-use browser context
+            // Create BrowserContextInterface via factory
             $browserContextDef = new Definition(BrowserContextInterface::class);
             $browserContextDef->setFactory([self::class, 'createBrowserContext']);
             $browserType = $cfg['type'] ?? 'chromium';
@@ -187,7 +182,6 @@ final class PlaywrightExtension extends Extension
 
     public static function createBrowserContext(PlaywrightConfig $config, string $browserType): BrowserContextInterface
     {
-        // Use the static Playwright API to create a ready-to-use browser context
         $launchOptions = [
             'headless' => $config->headless,
             'args' => $config->args,
@@ -195,7 +189,6 @@ final class PlaywrightExtension extends Extension
             'timeout' => $config->timeoutMs,
         ];
 
-        // Remove null/empty values
         $launchOptions = array_filter($launchOptions, static fn (mixed $value): bool => [] !== $value);
 
         return match ($browserType) {

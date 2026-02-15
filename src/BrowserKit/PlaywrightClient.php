@@ -17,13 +17,11 @@ namespace Playwright\Symfony\BrowserKit;
 use Playwright\Browser\BrowserContextInterface;
 use Playwright\Page\PageInterface;
 use Symfony\Component\BrowserKit\AbstractBrowser;
-use Symfony\Component\BrowserKit\Cookie;
 use Symfony\Component\BrowserKit\CookieJar;
 use Symfony\Component\BrowserKit\History;
 use Symfony\Component\BrowserKit\Request;
 use Symfony\Component\BrowserKit\Response as BrowserKitResponse;
 use Symfony\Component\DomCrawler\Crawler;
-use Symfony\Component\DomCrawler\Field\FormField;
 use Symfony\Component\DomCrawler\Form;
 use Symfony\Component\DomCrawler\Link;
 

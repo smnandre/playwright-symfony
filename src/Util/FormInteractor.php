@@ -18,6 +18,7 @@ use Playwright\Page\PageInterface;
 use Symfony\Component\DomCrawler\Form;
 
 /**
+ * @author Simon André <smn.andre@gmail.com>
  * @internal
  */
 final class FormInteractor

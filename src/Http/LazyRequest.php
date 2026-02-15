@@ -21,7 +21,7 @@ use Playwright\Network\ResponseInterface;
 /**
  * @author Simon André <smn.andre@gmail.com>
  */
-class LazyRequest implements RequestInterface
+final class LazyRequest implements RequestInterface
 {
     /**
      * @param array<string, mixed> $data

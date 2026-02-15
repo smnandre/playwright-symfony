@@ -18,6 +18,9 @@ use Playwright\Symfony\Client\Interception\AssetFile;
 use Playwright\Symfony\Client\Interception\AssetLocatorInterface;
 use Symfony\Component\Mime\MimeTypes;
 
+/**
+ * @author Simon André <smn.andre@gmail.com>
+ */
 final class FilesystemProxy implements AssetLocatorInterface
 {
     /** @var string[] */

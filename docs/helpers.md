@@ -546,12 +546,12 @@ public function testWithFixtures(): void
 
 ### Lifecycle Considerations
 
-**Important:** If you override `setUp()` or `tearDown()`, always call the parent methods:
+**Important:** If you override `setUp()` or `tearDown()`, always call the parent methods. Note that the browser process is managed at the class level and stopped in `tearDownAfterClass()`.
 
 ```php
 protected function setUp(): void
 {
-    parent::setUp(); // REQUIRED - boots the browser
+    parent::setUp(); // REQUIRED - starts/restarts the browser session
 
     // Your custom setup here
 }
@@ -560,7 +560,7 @@ protected function tearDown(): void
 {
     // Your custom cleanup here
 
-    parent::tearDown(); // REQUIRED - stops the browser
+    parent::tearDown(); // REQUIRED - handles exception restoration
 }
 ```
 

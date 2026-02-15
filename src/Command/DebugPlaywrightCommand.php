@@ -135,17 +135,13 @@ final class DebugPlaywrightCommand extends Command
     {
         // Use timeout command on Unix systems, or timeout via proc_open for better control
         if (PHP_OS_FAMILY === 'Windows') {
-            // On Windows, use basic timeout handling
             $fullCommand = sprintf('timeout %d %s 2>nul', $timeoutSeconds, $command);
         } else {
-            // On Unix systems (Linux, macOS), use timeout command
             $fullCommand = sprintf('timeout %d %s 2>/dev/null', $timeoutSeconds, $command);
         }
 
         exec($fullCommand, $output, $returnCode);
 
-        // Return true if command succeeded (return code 0)
-        // timeout command returns 124 on timeout, other codes for other failures
         return 0 === $returnCode;
     }
 }
