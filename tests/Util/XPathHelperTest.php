@@ -26,9 +26,9 @@ final class XPathHelperTest extends TestCase
         $dom = new \DOMDocument();
         $dom->loadHTML('<html><body><div id="test"></div></body></html>');
         $div = $dom->getElementById('test');
-        
+
         $xpath = XPathHelper::buildXPath($div);
-        
+
         // Expected: //html[1]/body[1]/div[1]
         $this->assertSame('//html[1]/body[1]/div[1]', strtolower($xpath));
     }
@@ -38,9 +38,9 @@ final class XPathHelperTest extends TestCase
         $dom = new \DOMDocument();
         $dom->loadHTML('<html><body><ul><li>1</li><li>2</li><li id="target">3</li></ul></body></html>');
         $li = $dom->getElementById('target');
-        
+
         $xpath = XPathHelper::buildXPath($li);
-        
+
         $this->assertSame('//html[1]/body[1]/ul[1]/li[3]', strtolower($xpath));
     }
 
@@ -49,9 +49,9 @@ final class XPathHelperTest extends TestCase
         $dom = new \DOMDocument();
         $dom->loadHTML('<html><body><div></div><span></span><p id="target"></p></body></html>');
         $p = $dom->getElementById('target');
-        
+
         $xpath = XPathHelper::buildXPath($p);
-        
+
         // p is the 1st of its name
         $this->assertSame('//html[1]/body[1]/p[1]', strtolower($xpath));
     }

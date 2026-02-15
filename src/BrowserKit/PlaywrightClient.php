@@ -16,6 +16,7 @@ namespace Playwright\Symfony\BrowserKit;
 
 use Playwright\Browser\BrowserContextInterface;
 use Playwright\Page\PageInterface;
+use Playwright\Symfony\Util\XPathHelper;
 use Symfony\Component\BrowserKit\AbstractBrowser;
 use Symfony\Component\BrowserKit\CookieJar;
 use Symfony\Component\BrowserKit\History;
@@ -33,6 +34,8 @@ use Symfony\Component\DomCrawler\Link;
  * - Builds a DomCrawler snapshot from the live DOM after each action.
  *
  * @extends AbstractBrowser<Request, BrowserKitResponse>
+ *
+ * @author Simon André <smn.andre@gmail.com>
  */
 final class PlaywrightClient extends AbstractBrowser
 {
@@ -115,7 +118,7 @@ final class PlaywrightClient extends AbstractBrowser
      */
     public function click(Link $link, array $serverParameters = []): Crawler
     {
-        $xpath = \Playwright\Symfony\Util\XPathHelper::buildXPath($link->getNode());
+        $xpath = XPathHelper::buildXPath($link->getNode());
         $locator = $this->page->locator('xpath='.$xpath);
         $this->handlePotentialPopup(static function () use ($locator): void {
             $locator->click();
@@ -137,7 +140,7 @@ final class PlaywrightClient extends AbstractBrowser
         \Playwright\Symfony\Util\FormInteractor::fill($this->page, $form);
 
         $this->handlePotentialPopup(function () use ($form): void {
-            $xpath = \Playwright\Symfony\Util\XPathHelper::buildXPath($form->getNode());
+            $xpath = XPathHelper::buildXPath($form->getNode());
             $this->page->locator('xpath='.$xpath)->evaluate('el => el.requestSubmit ? el.requestSubmit() : el.submit()');
         });
 

@@ -36,7 +36,7 @@ final class CookieJarSyncTest extends TestCase
 
         $this->assertNotNull($jar->get('c1', '/', 'localhost'));
         $this->assertSame('v1', $jar->get('c1', '/', 'localhost')->getValue());
-        
+
         $this->assertNotNull($jar->get('c2', '/app', 'example.com'));
         $this->assertSame('v2', $jar->get('c2', '/app', 'example.com')->getValue());
     }

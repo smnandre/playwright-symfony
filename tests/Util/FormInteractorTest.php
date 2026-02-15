@@ -34,7 +34,7 @@ final class FormInteractorTest extends TestCase
             <input type="checkbox" name="c" value="1">
             <select name="s"><option value="o1">O1</option></select>
         </form></body></html>';
-        
+
         $crawler = new Crawler($html, 'http://localhost');
         $form = $crawler->filterXPath('//form')->form();
         // Manually set some values in BrowserKit Form to simulate user input
@@ -42,7 +42,7 @@ final class FormInteractorTest extends TestCase
 
         $context = new FakeBrowserContext();
         $page = new FakePage($context);
-        
+
         // FormInteractor will call $page->locator() which uses our FakePage tracking
         FormInteractor::fill($page, $form);
 

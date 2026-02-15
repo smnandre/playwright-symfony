@@ -54,7 +54,6 @@ final class PlaywrightExtension extends Extension
         $container->setParameter('playwright.asset_public_roots', $assetConfig['public_roots'] ?? ['%kernel.project_dir%/public']);
         $container->setParameter('playwright.asset_dev_no_cache', $assetConfig['disable_cache'] ?? true);
 
-        // Register Playwright browsers (default + named)
         $this->registerBrowsers($container, $config['browsers'] ?? [], $config['default_browser'] ?? 'default');
 
         $container->register(BrowserKitClient::class, BrowserKitClient::class)
@@ -75,7 +74,6 @@ final class PlaywrightExtension extends Extension
      */
     private function registerBrowsers(ContainerBuilder $container, array $browsersConfig, string $defaultBrowser): void
     {
-        // Ensure a default browser exists even if no config provided
         if (!isset($browsersConfig[$defaultBrowser])) {
             $browsersConfig[$defaultBrowser] = [];
         }
@@ -91,14 +89,12 @@ final class PlaywrightExtension extends Extension
             $browserConfig = $cfg;
             $serviceId = sprintf('playwright.browser.%s', $name);
 
-            // Build PlaywrightConfig definition from array config
             $configDef = new Definition(PlaywrightConfig::class);
             $configArgs = $this->mapBrowserConfigArgs($browserConfig);
             $configDef->setArguments($configArgs);
 
             $container->setDefinition($serviceId.'.config', $configDef);
 
-            // Create BrowserContextInterface via factory
             $browserContextDef = new Definition(BrowserContextInterface::class);
             $browserContextDef->setFactory([self::class, 'createBrowserContext']);
             $browserType = $cfg['type'] ?? 'chromium';
@@ -110,11 +106,9 @@ final class PlaywrightExtension extends Extension
             $container->setDefinition($serviceId, $browserContextDef);
             $browserServiceIds[$name] = $serviceId;
 
-            // Autowire named arguments like BrowserContextInterface $firefoxDebug
             $this->registerAutowiredBrowserAlias($container, $name, $serviceId);
         }
 
-        // Default aliases similar to http_client
         if (isset($browserServiceIds[$defaultBrowser])) {
             $container->setAlias('playwright.browser', $browserServiceIds[$defaultBrowser])->setPublic(false);
             $container->setAlias(BrowserContextInterface::class, $browserServiceIds[$defaultBrowser])->setPublic(false);

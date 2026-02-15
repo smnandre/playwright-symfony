@@ -33,8 +33,15 @@ final class AssetMapperProxyTest extends TestCase
     public function testLocateReturnsNullWhenAssetNotFound(): void
     {
         $mapper = new class {
-            public function getAssetFromPublicPath() { return null; }
-            public function allAssets() { return []; }
+            public function getAssetFromPublicPath()
+            {
+                return null;
+            }
+
+            public function allAssets()
+            {
+                return [];
+            }
         };
         $proxy = new AssetMapperProxy($mapper);
         $this->assertNull($proxy->locate('/missing.css'));
@@ -49,9 +56,19 @@ final class AssetMapperProxyTest extends TestCase
         ];
 
         $mapper = new class($asset) {
-            public function __construct(private $asset) {}
-            public function getAssetFromPublicPath() { return null; }
-            public function allAssets() { return [$this->asset]; }
+            public function __construct(private $asset)
+            {
+            }
+
+            public function getAssetFromPublicPath()
+            {
+                return null;
+            }
+
+            public function allAssets()
+            {
+                return [$this->asset];
+            }
         };
 
         $proxy = new AssetMapperProxy($mapper);
@@ -64,15 +81,36 @@ final class AssetMapperProxyTest extends TestCase
     public function testExtractionFromMethods(): void
     {
         $asset = new class {
-            public function getPublicPath() { return '/method.css'; }
-            public function getSourcePath() { return '/src/method.css'; }
-            public function getContent() { return 'body { color: blue; }'; }
-            public function getLastModified() { return 123456789; }
+            public function getPublicPath()
+            {
+                return '/method.css';
+            }
+
+            public function getSourcePath()
+            {
+                return '/src/method.css';
+            }
+
+            public function getContent()
+            {
+                return 'body { color: blue; }';
+            }
+
+            public function getLastModified()
+            {
+                return 123456789;
+            }
         };
 
         $mapper = new class($asset) {
-            public function __construct(private $asset) {}
-            public function getAssetFromPublicPath($path) { return $path === '/method.css' ? $this->asset : null; }
+            public function __construct(private $asset)
+            {
+            }
+
+            public function getAssetFromPublicPath($path)
+            {
+                return '/method.css' === $path ? $this->asset : null;
+            }
         };
 
         $proxy = new AssetMapperProxy($mapper);
@@ -93,8 +131,14 @@ final class AssetMapperProxyTest extends TestCase
         ];
 
         $mapper = new class($asset) {
-            public function __construct(private $asset) {}
-            public function getAssetFromPublicPath($path) { return $path === '/prop.js' ? $this->asset : null; }
+            public function __construct(private $asset)
+            {
+            }
+
+            public function getAssetFromPublicPath($path)
+            {
+                return '/prop.js' === $path ? $this->asset : null;
+            }
         };
 
         $proxy = new AssetMapperProxy($mapper);
@@ -109,8 +153,14 @@ final class AssetMapperProxyTest extends TestCase
     {
         $asset = (object) ['publicPath' => '/fallback.txt', 'content' => 'data'];
         $mapper = new class($asset) {
-            public function __construct(private $asset) {}
-            public function getAsset($path) { return $path === 'fallback.txt' ? $this->asset : null; }
+            public function __construct(private $asset)
+            {
+            }
+
+            public function getAsset($path)
+            {
+                return 'fallback.txt' === $path ? $this->asset : null;
+            }
         };
 
         $proxy = new AssetMapperProxy($mapper);
@@ -123,8 +173,14 @@ final class AssetMapperProxyTest extends TestCase
     {
         $asset = (object) ['publicPath' => '/nothing.txt'];
         $mapper = new class($asset) {
-            public function __construct(private $asset) {}
-            public function getAsset($path) { return $this->asset; }
+            public function __construct(private $asset)
+            {
+            }
+
+            public function getAsset($path)
+            {
+                return $this->asset;
+            }
         };
 
         $proxy = new AssetMapperProxy($mapper);
@@ -139,8 +195,14 @@ final class AssetMapperProxyTest extends TestCase
             'content' => 'css',
         ];
         $mapper = new class($asset) {
-            public function __construct(private $asset) {}
-            public function getAssetFromPublicPath($path) { return $this->asset; }
+            public function __construct(private $asset)
+            {
+            }
+
+            public function getAssetFromPublicPath($path)
+            {
+                return $this->asset;
+            }
         };
 
         $proxy = new AssetMapperProxy($mapper);
@@ -152,8 +214,14 @@ final class AssetMapperProxyTest extends TestCase
     {
         $asset = (object) ['publicPath' => '/binary.dat', 'content' => '0101'];
         $mapper = new class($asset) {
-            public function __construct(private $asset) {}
-            public function getAssetFromPublicPath($path) { return $this->asset; }
+            public function __construct(private $asset)
+            {
+            }
+
+            public function getAssetFromPublicPath($path)
+            {
+                return $this->asset;
+            }
         };
 
         $proxy = new AssetMapperProxy($mapper);

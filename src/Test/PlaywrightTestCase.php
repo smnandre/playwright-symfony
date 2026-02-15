@@ -102,9 +102,6 @@ abstract class PlaywrightTestCase extends KernelTestCase
 
     protected function tearDown(): void
     {
-        // We don't stop the browser here anymore to keep it for next tests.
-        // It will be stopped by PHPUnit or manually if needed.
-
         $this->restoreExceptionHandlers();
         parent::tearDown();
     }
@@ -132,7 +129,8 @@ abstract class PlaywrightTestCase extends KernelTestCase
             while ($iterations < $maxIterations) {
                 // Push a no-op handler to get the previous one without triggering an error
                 $previousHandler = set_exception_handler(static fn () => null);
-                restore_exception_handler(); // Remove the no-op handler
+                // Remove the no-op handler
+                restore_exception_handler();
 
                 if (null === $previousHandler) {
                     // No more custom handlers, only PHP's default is left
@@ -149,8 +147,6 @@ abstract class PlaywrightTestCase extends KernelTestCase
         }
     }
 
-    // Clean delegate methods for seamless DX
-
     protected function visit(string $path): PageInterface
     {
         return $this->client->visit($path);
@@ -166,12 +162,12 @@ abstract class PlaywrightTestCase extends KernelTestCase
         return $page;
     }
 
-    // Magic property support for $page
     public function __get(string $name): mixed
     {
         if ('page' === $name) {
             return $this->getPage();
         }
+
         throw new \InvalidArgumentException("Property '$name' does not exist");
     }
 
@@ -236,7 +232,6 @@ abstract class PlaywrightTestCase extends KernelTestCase
         return $this->baseUrl;
     }
 
-    // Hooks for customization
     public function beforeRequest(SymfonyRequest $request): void
     {
         // Override to add custom logic before each request
@@ -324,7 +319,7 @@ abstract class PlaywrightTestCase extends KernelTestCase
 
         $param = $this->getContainerParam('playwright.debug_logging');
 
-        return null !== $param ? (bool) $param : false;
+        return null !== $param && (bool) $param;
     }
 
     private function resolveBaseUrl(): string
@@ -352,7 +347,6 @@ abstract class PlaywrightTestCase extends KernelTestCase
         $hosts = $this->getContainerParam('playwright.intercepted_hosts');
 
         if (is_array($hosts) && !empty($hosts)) {
-            // Filter to ensure all values are strings
             $stringHosts = array_filter($hosts, 'is_string');
             if (!empty($stringHosts)) {
                 /* @var string[] $stringHosts */

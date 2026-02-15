@@ -19,6 +19,7 @@ use Symfony\Component\DomCrawler\Form;
 
 /**
  * @author Simon André <smn.andre@gmail.com>
+ *
  * @internal
  */
 final class FormInteractor
@@ -32,27 +33,27 @@ final class FormInteractor
 
             $type = strtolower($node->getAttribute('type') ?? '');
 
-            if ($node->tagName === 'select') {
+            if ('select' === $node->tagName) {
                 $values = $field->getValue();
                 $values = is_array($values) ? $values : [$values];
                 $locator->selectOption($values);
                 continue;
             }
 
-            if ($type === 'checkbox') {
+            if ('checkbox' === $type) {
                 $shouldBeChecked = (bool) $field->getValue();
                 $shouldBeChecked ? $locator->check() : $locator->uncheck();
                 continue;
             }
 
-            if ($type === 'radio') {
-                if ($field->getValue() !== null) {
+            if ('radio' === $type) {
+                if (null !== $field->getValue()) {
                     $locator->check();
                 }
                 continue;
             }
 
-            if ($type === 'file') {
+            if ('file' === $type) {
                 $value = $field->getValue();
                 if ($value) {
                     $locator->setInputFiles($value);

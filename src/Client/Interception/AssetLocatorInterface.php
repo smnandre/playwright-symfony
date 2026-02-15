@@ -16,6 +16,8 @@ namespace Playwright\Symfony\Client\Interception;
 
 /**
  * Describes a service able to resolve assets for a given request path.
+ *
+ * @author Simon André <smn.andre@gmail.com>
  */
 interface AssetLocatorInterface
 {

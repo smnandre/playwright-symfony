@@ -133,7 +133,6 @@ final class DebugPlaywrightCommand extends Command
 
     private function executeWithTimeout(string $command, int $timeoutSeconds = 10): bool
     {
-        // Use timeout command on Unix systems, or timeout via proc_open for better control
         if (PHP_OS_FAMILY === 'Windows') {
             $fullCommand = sprintf('timeout %d %s 2>nul', $timeoutSeconds, $command);
         } else {

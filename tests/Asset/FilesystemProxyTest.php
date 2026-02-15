@@ -28,7 +28,7 @@ final class FilesystemProxyTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->tempDir = sys_get_temp_dir() . '/pw_fs_test_' . uniqid();
+        $this->tempDir = sys_get_temp_dir().'/pw_fs_test_'.uniqid();
         @mkdir($this->tempDir, 0777, true);
     }
 
@@ -39,11 +39,11 @@ final class FilesystemProxyTest extends TestCase
 
     public function testLocateFindsExistingFile(): void
     {
-        file_put_contents($this->tempDir . '/test.txt', 'hello world');
-        
+        file_put_contents($this->tempDir.'/test.txt', 'hello world');
+
         $proxy = new FilesystemProxy([$this->tempDir]);
         $asset = $proxy->locate('/test.txt');
-        
+
         $this->assertNotNull($asset);
         $this->assertSame('hello world', $asset->getContent());
         $this->assertSame('text/plain', $asset->getContentType());
@@ -57,16 +57,16 @@ final class FilesystemProxyTest extends TestCase
 
     public function testLocateReturnsNullForDirectory(): void
     {
-        @mkdir($this->tempDir . '/subdir');
+        @mkdir($this->tempDir.'/subdir');
         $proxy = new FilesystemProxy([$this->tempDir]);
         $this->assertNull($proxy->locate('/subdir'));
     }
 
     public function testLocateHandlesQueryString(): void
     {
-        file_put_contents($this->tempDir . '/test.js', 'js');
+        file_put_contents($this->tempDir.'/test.js', 'js');
         $proxy = new FilesystemProxy([$this->tempDir]);
-        
+
         $asset = $proxy->locate('/test.js?v=123');
         $this->assertNotNull($asset);
         $this->assertSame('js', $asset->getContent());
@@ -80,16 +80,16 @@ final class FilesystemProxyTest extends TestCase
 
     public function testLocateWithMultipleRoots(): void
     {
-        $root1 = $this->tempDir . '/root1';
-        $root2 = $this->tempDir . '/root2';
+        $root1 = $this->tempDir.'/root1';
+        $root2 = $this->tempDir.'/root2';
         @mkdir($root1);
         @mkdir($root2);
-        
-        file_put_contents($root2 . '/found.txt', 'found me');
-        
+
+        file_put_contents($root2.'/found.txt', 'found me');
+
         $proxy = new FilesystemProxy([$root1, $root2]);
         $asset = $proxy->locate('/found.txt');
-        
+
         $this->assertNotNull($asset);
         $this->assertSame('found me', $asset->getContent());
     }
@@ -101,7 +101,7 @@ final class FilesystemProxyTest extends TestCase
         }
         $files = array_diff(scandir($dir), ['.', '..']);
         foreach ($files as $file) {
-            $path = $dir . '/' . $file;
+            $path = $dir.'/'.$file;
             is_dir($path) ? $this->removeDirectory($path) : unlink($path);
         }
         rmdir($dir);

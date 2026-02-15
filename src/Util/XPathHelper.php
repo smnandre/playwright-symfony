@@ -15,6 +15,8 @@ declare(strict_types=1);
 namespace Playwright\Symfony\Util;
 
 /**
+ * @author Simon André <smn.andre@gmail.com>
+ *
  * @internal
  */
 final class XPathHelper
@@ -27,12 +29,12 @@ final class XPathHelper
     {
         $segments = [];
 
-        for ($n = $node; $n !== null && $n->nodeType === XML_ELEMENT_NODE; $n = $n->parentNode) {
+        for ($n = $node; null !== $n && XML_ELEMENT_NODE === $n->nodeType; $n = $n->parentNode) {
             $index = 1;
             $sibling = $n->previousSibling;
             while ($sibling) {
-                if ($sibling->nodeType === XML_ELEMENT_NODE && $sibling->nodeName === $n->nodeName) {
-                    $index++;
+                if (XML_ELEMENT_NODE === $sibling->nodeType && $sibling->nodeName === $n->nodeName) {
+                    ++$index;
                 }
                 $sibling = $sibling->previousSibling;
             }

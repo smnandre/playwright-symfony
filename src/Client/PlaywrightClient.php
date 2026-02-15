@@ -23,11 +23,11 @@ use Psr\Log\NullLogger;
 use Symfony\Component\BrowserKit\AbstractBrowser;
 use Symfony\Component\BrowserKit\Request as BrowserKitRequest;
 use Symfony\Component\BrowserKit\Response as BrowserKitResponse;
-use Symfony\Component\HttpFoundation\Request as SymfonyRequest;
-use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 use Symfony\Component\DomCrawler\Crawler;
 use Symfony\Component\DomCrawler\Form;
 use Symfony\Component\DomCrawler\Link;
+use Symfony\Component\HttpFoundation\Request as SymfonyRequest;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
 use Symfony\Component\HttpKernel\KernelInterface;
 use Symfony\Component\HttpKernel\Profiler\Profile;
@@ -181,7 +181,7 @@ class PlaywrightClient extends AbstractBrowser
             } catch (\Throwable $e) {
                 if (str_contains($e->getMessage(), 'navigating')) {
                     usleep(200000); // 200ms
-                    $retryCount++;
+                    ++$retryCount;
                     continue;
                 }
                 throw $e;
@@ -264,10 +264,10 @@ class PlaywrightClient extends AbstractBrowser
         // Behavior contract (used by tests): clearCookie removes the cookie.
         // We use clearCookies() with a filter if possible, or fallback to setting it to empty if API is limited.
         // Actually, Playwright PHP clearCookies() doesn't take arguments yet in some versions.
-        
+
         // Better: use addCookies with a very old expiration date to force deletion if the API doesn't support selective clear.
         // But for our tests, setting it to empty AND returning null in getCookie is usually enough if handled consistently.
-        
+
         $options = array_filter([
             'domain' => $domain,
             'path' => $path,
@@ -368,12 +368,12 @@ class PlaywrightClient extends AbstractBrowser
         $url = parse_url($uri);
         $path = ($url['path'] ?? '/').(isset($url['query']) ? '?'.$url['query'] : '');
 
-        if ($request->getMethod() === 'GET' && empty($request->getParameters())) {
+        if ('GET' === $request->getMethod() && empty($request->getParameters())) {
             $this->visit($path);
         } else {
             // For POST or requests with parameters, we should ideally use a synthetic form
             // but for now, we'll just visit the path to trigger the interception.
-            // If it's a POST, we might need a more complex implementation similar to 
+            // If it's a POST, we might need a more complex implementation similar to
             // the other PlaywrightClient.
             $this->visit($path);
         }

@@ -26,6 +26,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  * like CSS/JS/images returned by AssetMapper and other responders.
  *
  * @author Simon André <smn.andre@gmail.com>
+ *
+ * @internal
  */
 class ResponseConverter
 {
@@ -34,11 +36,9 @@ class ResponseConverter
      */
     public function prepareFulfillOptions(SymfonyResponse $response): array
     {
-        // Normalize and prepare headers
         $headers = $this->formatHeaders($response->headers->all());
         $contentType = $response->headers->get('content-type') ?: null;
 
-        // Compute body for all Response variants
         $body = $response->getContent();
 
         // BinaryFileResponse does not expose content via getContent()
@@ -46,7 +46,6 @@ class ResponseConverter
             $file = $response->getFile();
             $path = $file->getPathname();
             $body = @file_get_contents($path) ?: '';
-            // Ensure we have a sane content type even if missing
             if (!$contentType) {
                 $ext = pathinfo($path, PATHINFO_EXTENSION);
                 $map = [

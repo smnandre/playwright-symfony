@@ -23,6 +23,8 @@ use Symfony\Component\HttpFoundation\Request as SymfonyRequest;
  * Converts Playwright requests to Symfony requests.
  *
  * @author Simon André <smn.andre@gmail.com>
+ *
+ * @internal
  */
 class RequestConverter
 {
@@ -48,7 +50,6 @@ class RequestConverter
             'HTTPS' => ($url['scheme'] ?? 'http') === 'https' ? 'on' : 'off',
         ];
 
-        // Normalize headers
         $lower = array_change_key_case($headers, CASE_LOWER);
         foreach ($headers as $name => $value) {
             $key = strtoupper(str_replace('-', '_', (string) $name));
@@ -59,7 +60,6 @@ class RequestConverter
             }
         }
 
-        // Parse cookies
         if (isset($lower['cookie'])) {
             $cookies = $this->parseCookieHeader($lower['cookie']);
         }
@@ -67,12 +67,12 @@ class RequestConverter
         $content = null;
         if ($postData) {
             $contentType = $lower['content-type'] ?? '';
-            if (str_starts_with(strtolower((string) $contentType), 'application/x-www-form-urlencoded')) {
+            if (str_starts_with(strtolower($contentType), 'application/x-www-form-urlencoded')) {
                 parse_str($postData, $parameters);
                 $content = $postData;
-            } elseif (str_starts_with(strtolower((string) $contentType), 'multipart/form-data')) {
+            } elseif (str_starts_with(strtolower($contentType), 'multipart/form-data')) {
                 $content = $postData;
-                $this->parseMultipartFormData((string) $contentType, $postData, $parameters, $files);
+                $this->parseMultipartFormData($contentType, $postData, $parameters, $files);
             } else {
                 $content = $postData;
             }

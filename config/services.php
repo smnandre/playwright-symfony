@@ -19,6 +19,7 @@ use Playwright\Symfony\Client\RequestConverter;
 use Playwright\Symfony\Client\ResponseConverter;
 use Playwright\Symfony\Command\DebugPlaywrightCommand;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
+
 use function Symfony\Component\DependencyInjection\Loader\Configurator\param;
 use function Symfony\Component\DependencyInjection\Loader\Configurator\service;
 

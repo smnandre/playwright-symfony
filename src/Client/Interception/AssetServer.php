@@ -21,6 +21,8 @@ namespace Playwright\Symfony\Client\Interception;
  * but can aggregate any number of locators (filesystem, custom resolvers, etc.).
  *
  * @author Simon André <smn.andre@gmail.com>
+ *
+ * @internal
  */
 final class AssetServer
 {
