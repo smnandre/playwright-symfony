@@ -6,13 +6,13 @@ declare(strict_types=1);
  * This file is part of the community-maintained Playwright PHP project.
  * It is not affiliated with or endorsed by Microsoft.
  *
- * (c) 2025-Present - Playwright PHP <https://github.com/playwright-php>
+ * (c) 2025-Present - Playwright PHP - https://github.com/playwright-php
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
  */
 
-namespace Playwright\Symfony\Tests\Integration\E2E;
+namespace Playwright\Symfony\Tests\Functional;
 
 use Playwright\Symfony\Test\Assert\PlaywrightTestAssertionsTrait;
 use Playwright\Symfony\Test\PlaywrightTestCase;
@@ -21,7 +21,7 @@ use Symfony\Component\HttpFoundation\Request as SymfonyRequest;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 use Symfony\Component\HttpKernel\KernelInterface;
 
-final class RequestResponseInspectionE2ETest extends PlaywrightTestCase
+final class RequestResponseInspectionTest extends PlaywrightTestCase
 {
     use PlaywrightTestAssertionsTrait;
 
