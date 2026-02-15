@@ -6,7 +6,7 @@ declare(strict_types=1);
  * This file is part of the community-maintained Playwright PHP project.
  * It is not affiliated with or endorsed by Microsoft.
  *
- * (c) 2025-Present - Playwright PHP <https://github.com/playwright-php>
+ * (c) 2025-Present - Playwright PHP - https://github.com/playwright-php
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -125,12 +125,14 @@ class PlaywrightBrowser
 
     public static function fromEnvironment(): self
     {
-        $browserType = strtolower((string) getenv('PLAYWRIGHT_BROWSER'));
+        /** @var string|null $env */
+        $env = $_ENV['PLAYWRIGHT_BROWSER'] ?? $_SERVER['PLAYWRIGHT_BROWSER'] ?? getenv('PLAYWRIGHT_BROWSER');
+        $browserType = strtolower((string) $env);
         if (!in_array($browserType, ['chromium', 'firefox', 'webkit'], true)) {
             $browserType = 'chromium';
         }
 
-        $headless = 'false' !== getenv('PLAYWRIGHT_HEADLESS');
+        $headless = 'false' !== ($_ENV['PLAYWRIGHT_HEADLESS'] ?? $_SERVER['PLAYWRIGHT_HEADLESS'] ?? getenv('PLAYWRIGHT_HEADLESS'));
 
         return new self($browserType, $headless);
     }
