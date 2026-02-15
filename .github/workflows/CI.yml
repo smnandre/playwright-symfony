@@ -15,12 +15,17 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  
+  sec:
+    uses: playwright-php/.github/.github/workflows/SEC.yml@main
+    # with:
+      # php-version: '8.4'
+      # composer-audit-args: '--no-interaction'
 
   cs:
     uses: playwright-php/.github/.github/workflows/CS.yml@main
     # with:
       # php-version: '8.4'
-      # composer-validate: true
       # php-cs-fixer-args: '--diff --dry-run'
 
   sa:
@@ -29,3 +34,38 @@ jobs:
       # php-version: '8.4'
       # phpstan-args: 'analyse --no-progress --memory-limit=-1'
   
+  unit-tests:
+    name: "Unit Tests (PHP ${{ matrix.php-version }})"
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php-version: ['8.3', '8.4', '8.5']
+        dependencies: ['high']
+        includes:
+          - php-version: '8.3'
+            dependencies: 'low'
+      fail-fast: false
+    steps:
+      - name: "Git: checkout"
+        uses: actions/checkout@v4
+
+      - name: "PHP: setup ${{ matrix.php-version }}"
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php-version }}
+          coverage: pcov
+          tools: phpunit
+          
+      - name: "Composer: install (${{ matrix.dependencies }})"
+        run: |
+          if [ "${{ matrix.dependencies }}" == "low" ]; then
+            composer update --prefer-lowest --prefer-dist --no-interaction --no-progress
+          else
+            composer install --prefer-dist --no-interaction --no-progress
+          fi
+
+      - name: "PHPUnit: version"
+        run: phpunit --version
+
+      - name: "PHPUnit: tests"
+        run: phpunit --testsuite=unit
