@@ -36,8 +36,13 @@ final class FormInteractor
 
             if ('select' === $node->tagName) {
                 $values = $field->getValue();
-                $values = is_array($values) ? $values : [$values];
-                $locator->selectOption($values);
+                if (is_array($values)) {
+                    /** @var array<string> $stringValues */
+                    $stringValues = array_map(static fn (mixed $v): string => is_scalar($v) ? (string) $v : '', $values);
+                    $locator->selectOption($stringValues);
+                } else {
+                    $locator->selectOption(is_scalar($values) ? (string) $values : '');
+                }
                 continue;
             }
 
@@ -57,7 +62,13 @@ final class FormInteractor
             if ('file' === $type) {
                 $value = $field->getValue();
                 if ($value) {
-                    $locator->setInputFiles($value);
+                    if (is_array($value)) {
+                        /** @var array<string> $fileArray */
+                        $fileArray = array_map(static fn (mixed $v): string => is_scalar($v) ? (string) $v : '', $value);
+                        $locator->setInputFiles($fileArray);
+                    } else {
+                        $locator->setInputFiles((string) $value);
+                    }
                 }
                 continue;
             }

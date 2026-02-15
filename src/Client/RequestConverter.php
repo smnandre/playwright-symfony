@@ -194,7 +194,7 @@ class RequestConverter
     }
 
     /**
-     * @return array<string, mixed>
+     * @return array<mixed>
      */
     private function parseContentDisposition(string $header): array
     {
@@ -212,10 +212,16 @@ class RequestConverter
             }
         }
 
-        if (!empty($typePart)) {
-            $assoc['type'] = strtolower($typePart[0]);
+        if (!empty($typePart) && is_array($typePart) && isset($typePart[0])) {
+            $firstPart = $typePart[0];
+            if (is_string($firstPart)) {
+                $assoc['type'] = strtolower($firstPart);
+            } elseif (is_scalar($firstPart)) {
+                $assoc['type'] = strtolower((string) $firstPart);
+            }
         }
 
+        /* @var array<string, mixed> */
         return $assoc;
     }
 

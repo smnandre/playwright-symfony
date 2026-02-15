@@ -190,8 +190,6 @@ class PlaywrightClient extends AbstractBrowser
         return new Crawler($content, $page->url());
     }
 
-
-
     /**
      * @param array<string, mixed> $options
      */
@@ -382,8 +380,12 @@ class PlaywrightClient extends AbstractBrowser
 
     private function setupRequestInterception(): void
     {
-        $this->browser->setupRouting(function ($route) {
+        $this->browser->setupRouting(function (mixed $route): void {
+            if (!is_object($route) || !method_exists($route, 'request')) {
+                return;
+            }
             $request = $route->request();
+            \assert($request instanceof RequestInterface);
             $url = parse_url($request->url());
 
             if (!$this->shouldInterceptRequest($url)) {
@@ -391,7 +393,9 @@ class PlaywrightClient extends AbstractBrowser
                     'url' => $request->url(),
                     'method' => $request->method(),
                 ]);
-                $route->continue();
+                if (method_exists($route, 'continue')) {
+                    $route->continue();
+                }
 
                 return;
             }
@@ -406,7 +410,9 @@ class PlaywrightClient extends AbstractBrowser
                         'url' => $request->url(),
                         'method' => $request->method(),
                     ]);
-                    $route->fulfill($assetResponse);
+                    if (method_exists($route, 'fulfill')) {
+                        $route->fulfill($assetResponse);
+                    }
 
                     return;
                 }
@@ -418,7 +424,9 @@ class PlaywrightClient extends AbstractBrowser
             }
 
             $response = $this->handleInternalRequest($request);
-            $route->fulfill($this->responseConverter->prepareFulfillOptions($response));
+            if (method_exists($route, 'fulfill')) {
+                $route->fulfill($this->responseConverter->prepareFulfillOptions($response));
+            }
         });
     }
 

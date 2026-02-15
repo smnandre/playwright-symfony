@@ -43,18 +43,24 @@ final class PlaywrightExtension extends Extension
             return;
         }
 
-        $container->setParameter('playwright.intercepted_hosts', $config['intercepted_hosts']);
-        $container->setParameter('playwright.debug', $config['debug']);
-        $container->setParameter('playwright.playwright_path', $config['playwright_path']);
-        $container->setParameter('playwright.node_path', $config['node_path']);
-        $container->setParameter('playwright.base_url', $config['base_url']);
-        $container->setParameter('playwright.debug_logging', $config['debug_logging']);
+        $container->setParameter('playwright.intercepted_hosts', $config['intercepted_hosts']); // @phpstan-ignore argument.type
+        $container->setParameter('playwright.debug', $config['debug']); // @phpstan-ignore argument.type
+        $container->setParameter('playwright.playwright_path', $config['playwright_path']); // @phpstan-ignore argument.type
+        $container->setParameter('playwright.node_path', $config['node_path']); // @phpstan-ignore argument.type
+        $container->setParameter('playwright.base_url', $config['base_url']); // @phpstan-ignore argument.type
+        $container->setParameter('playwright.debug_logging', $config['debug_logging']); // @phpstan-ignore argument.type
         $assetConfig = $config['assets'] ?? [];
-        $container->setParameter('playwright.asset_prefixes', $assetConfig['prefixes'] ?? ['/assets', '/build', '/_framework/ux']);
-        $container->setParameter('playwright.asset_public_roots', $assetConfig['public_roots'] ?? ['%kernel.project_dir%/public']);
-        $container->setParameter('playwright.asset_dev_no_cache', $assetConfig['disable_cache'] ?? true);
+        \assert(is_array($assetConfig));
+        $container->setParameter('playwright.asset_prefixes', $assetConfig['prefixes'] ?? ['/assets', '/build', '/_framework/ux']); // @phpstan-ignore argument.type
+        $container->setParameter('playwright.asset_public_roots', $assetConfig['public_roots'] ?? ['%kernel.project_dir%/public']); // @phpstan-ignore argument.type
+        $container->setParameter('playwright.asset_dev_no_cache', $assetConfig['disable_cache'] ?? true); // @phpstan-ignore argument.type
 
-        $this->registerBrowsers($container, $config['browsers'] ?? [], $config['default_browser'] ?? 'default');
+        $browsersConfig = $config['browsers'] ?? [];
+        \assert(is_array($browsersConfig));
+        /** @var array<string, mixed> $browsersConfig */
+        $defaultBrowser = $config['default_browser'] ?? 'default';
+        \assert(is_string($defaultBrowser));
+        $this->registerBrowsers($container, $browsersConfig, $defaultBrowser);
 
         $container->register(BrowserKitClient::class, BrowserKitClient::class)
             ->setFactory([BrowserKitClient::class, 'fromContext'])

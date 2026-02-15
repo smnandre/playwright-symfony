@@ -70,6 +70,8 @@ final class AssetMapperProxy implements AssetLocatorInterface
         if (method_exists($this->mapper, 'getAssetFromPublicPath')) {
             $asset = $this->mapper->getAssetFromPublicPath($publicPath);
             if (null !== $asset) {
+                \assert(is_object($asset));
+
                 return $asset;
             }
         }
@@ -81,6 +83,8 @@ final class AssetMapperProxy implements AssetLocatorInterface
         if (method_exists($this->mapper, 'getAsset')) {
             $asset = $this->mapper->getAsset(ltrim($publicPath, '/'));
             if (null !== $asset) {
+                \assert(is_object($asset));
+
                 return $asset;
             }
         }
@@ -103,7 +107,11 @@ final class AssetMapperProxy implements AssetLocatorInterface
             return $this->assetIndex;
         }
 
-        foreach ($this->mapper->allAssets() as $candidate) {
+        $allAssets = $this->mapper->allAssets();
+        \assert(is_iterable($allAssets));
+
+        foreach ($allAssets as $candidate) {
+            \assert(is_object($candidate));
             $candidatePath = $this->extractPublicPath($candidate);
             if (null === $candidatePath || isset($this->assetIndex[$candidatePath])) {
                 continue;

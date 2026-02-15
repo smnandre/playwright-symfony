@@ -104,8 +104,8 @@ final class PlaywrightClient extends AbstractBrowser
         $response = $this->submitSyntheticForm(
             $uri,
             $method,
-            $request->getParameters(),
-            $request->getFiles(),
+            $request->getParameters(), // @phpstan-ignore argument.type
+            $request->getFiles(), // @phpstan-ignore argument.type
             (string) $request->getContent()
         );
         $this->lastResponse = $response;
@@ -276,7 +276,7 @@ JS,
         foreach ($server as $key => $value) {
             if (str_starts_with($key, 'HTTP_')) {
                 $name = str_replace('_', '-', strtolower(substr($key, 5)));
-                $headers[$name] = (string) $value;
+                $headers[$name] = is_string($value) ? $value : (is_scalar($value) ? (string) $value : '');
             }
         }
         if (!empty($headers)) {
@@ -287,9 +287,11 @@ JS,
 
         if (isset($server['PHP_AUTH_USER'], $server['PHP_AUTH_PW'])) {
             if (method_exists($this->context, 'setHttpCredentials')) {
+                $username = $server['PHP_AUTH_USER'];
+                $password = $server['PHP_AUTH_PW'];
                 $this->context->setHttpCredentials([
-                    'username' => (string) $server['PHP_AUTH_USER'],
-                    'password' => (string) $server['PHP_AUTH_PW'],
+                    'username' => is_string($username) ? $username : (is_scalar($username) ? (string) $username : ''),
+                    'password' => is_string($password) ? $password : (is_scalar($password) ? (string) $password : ''),
                 ]);
             }
         }

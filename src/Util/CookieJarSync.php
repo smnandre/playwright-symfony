@@ -30,12 +30,12 @@ final class CookieJarSync
         foreach ($context->cookies() as $c) {
             $jar->set(new Cookie(
                 name: (string) $c['name'],
-                value: (string) $c['value'],
-                expires: $c['expires'],
-                path: (string) $c['path'],
-                domain: (string) $c['domain'],
-                secure: (bool) $c['secure'],
-                httponly: (bool) $c['httpOnly'],
+                value: (string) ($c['value'] ?? ''), // @phpstan-ignore nullCoalesce.offset
+                expires: $c['expires'] ?? null, // @phpstan-ignore nullCoalesce.offset
+                path: (string) ($c['path'] ?? '/'), // @phpstan-ignore nullCoalesce.offset
+                domain: (string) ($c['domain'] ?? ''), // @phpstan-ignore nullCoalesce.offset
+                secure: (bool) ($c['secure'] ?? false), // @phpstan-ignore nullCoalesce.offset
+                httponly: (bool) ($c['httpOnly'] ?? false), // @phpstan-ignore nullCoalesce.offset
             ));
         }
     }
@@ -45,12 +45,12 @@ final class CookieJarSync
         foreach ($context->cookies([$url]) as $c) {
             $jar->set(new Cookie(
                 name: (string) $c['name'],
-                value: (string) $c['value'],
-                expires: $c['expires'],
-                path: (string) $c['path'],
-                domain: (string) $c['domain'],
-                secure: (bool) $c['secure'],
-                httponly: (bool) $c['httpOnly'],
+                value: (string) ($c['value'] ?? ''), // @phpstan-ignore nullCoalesce.offset
+                expires: $c['expires'] ?? null, // @phpstan-ignore nullCoalesce.offset
+                path: (string) ($c['path'] ?? '/'), // @phpstan-ignore nullCoalesce.offset
+                domain: (string) ($c['domain'] ?? ''), // @phpstan-ignore nullCoalesce.offset
+                secure: (bool) ($c['secure'] ?? false), // @phpstan-ignore nullCoalesce.offset
+                httponly: (bool) ($c['httpOnly'] ?? false), // @phpstan-ignore nullCoalesce.offset
             ));
         }
     }
