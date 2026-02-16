@@ -15,6 +15,7 @@ declare(strict_types=1);
 namespace Playwright\Symfony\Tests\Client\Fixtures;
 
 use Playwright\Locator\LocatorInterface;
+use Playwright\Page\PageInterface;
 
 class MockLocator implements LocatorInterface
 {
@@ -230,7 +231,7 @@ class MockLocator implements LocatorInterface
         return $this;
     }
 
-    public function page(): \Playwright\Page\PageInterface
+    public function page(): PageInterface
     {
         return $this->page;
     }

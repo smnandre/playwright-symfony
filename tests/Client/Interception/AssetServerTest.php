@@ -14,11 +14,15 @@ declare(strict_types=1);
 
 namespace Playwright\Symfony\Tests\Client\Interception;
 
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\UsesClass;
 use PHPUnit\Framework\TestCase;
 use Playwright\Symfony\Client\Interception\AssetFile;
 use Playwright\Symfony\Client\Interception\AssetLocatorInterface;
 use Playwright\Symfony\Client\Interception\AssetServer;
 
+#[CoversClass(AssetServer::class)]
+#[UsesClass(AssetFile::class)]
 final class AssetServerTest extends TestCase
 {
     public function testSupportsReturnsTrueForGetRequestWithMatchingPrefix(): void

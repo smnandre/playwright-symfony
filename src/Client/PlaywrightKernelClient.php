@@ -16,8 +16,10 @@ namespace Playwright\Symfony\Client;
 
 use Playwright\Network\RequestInterface;
 use Playwright\Page\PageInterface;
-use Playwright\Symfony\Browser\PlaywrightBrowser;
 use Playwright\Symfony\Client\Interception\AssetServer;
+use Playwright\Symfony\Util\CookieJarSync;
+use Playwright\Symfony\Util\FormInteractor;
+use Playwright\Symfony\Util\XPathHelper;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\BrowserKit\AbstractBrowser;
@@ -34,18 +36,52 @@ use Symfony\Component\HttpKernel\Profiler\Profile;
 use Symfony\Component\HttpKernel\Profiler\Profiler;
 
 /**
- * BrowserKit-compatible client that uses Playwright for browser automation
- * while routing requests through Symfony's HttpKernel.
+ * Internal BrowserKit client that intercepts browser requests and routes them through Symfony's HttpKernel.
  *
- * @author Simon André <smn.andre@gmail.com>
+ * This is the core client for in-process E2E testing of Symfony applications. It combines a real
+ * Playwright browser with Symfony's HttpKernel to enable full browser testing while maintaining
+ * access to Symfony internals (services, events, profiler, request/response inspection).
  *
- * @internal
+ * Primary role in architecture:
+ * - Used exclusively by PlaywrightTestCase (users never instantiate this directly)
+ * - Intercepts HTTP requests from the browser to configured hosts (localhost, 127.0.0.1)
+ * - Routes intercepted requests through Symfony's kernel in the same PHP process
+ * - Provides access to last Symfony request/response for assertions
+ * - Integrates AssetServer for fast static asset serving (bypasses kernel)
+ *
+ * How request interception works:
+ * 1. User calls visit('/path') → navigates browser to http://localhost/path
+ * 2. Browser makes HTTP request → intercepted via BrowserRegistry->setupRouting()
+ * 3. Request matched against interceptedHosts → if matched, proceeds to step 4
+ * 4. AssetServer checks if request is for static asset → if yes, serves directly
+ * 5. Otherwise: RequestConverter → HttpKernel->handle() → ResponseConverter → browser
+ * 6. Test can inspect via getLastSymfonyRequest(), getLastSymfonyResponse()
+ *
+ * Key features:
+ * - In-process kernel execution (no real HTTP, no separate server)
+ * - Full access to Symfony container, services, and profiler
+ * - beforeRequest() and afterResponse() hooks for custom logic
+ * - Cookie management and authentication helpers
+ * - BrowserKit API compatibility (visit, click, submit, getCrawler)
+ *
+ * When to use:
+ * - Testing your Symfony application with real browser behavior
+ * - Need to inspect Symfony internals (request, response, services)
+ * - Want fast E2E tests without network overhead
+ *
+ * When NOT to use:
+ * - Testing external websites → use BrowserKit\PlaywrightClient instead
+ * - Need real HTTP networking behavior → use BrowserKit\PlaywrightClient instead
+ *
+ * @internal This class is only used by PlaywrightTestCase and should not be instantiated directly
  *
  * @final
  *
  * @extends AbstractBrowser<BrowserKitRequest, BrowserKitResponse>
+ *
+ * @author Simon André <smn.andre@gmail.com>
  */
-class PlaywrightClient extends AbstractBrowser
+class PlaywrightKernelClient extends AbstractBrowser
 {
     private ?SymfonyRequest $lastSymfonyRequest = null;
     private ?SymfonyResponse $lastSymfonyResponse = null;
@@ -61,7 +97,7 @@ class PlaywrightClient extends AbstractBrowser
      * @param string[]|null        $interceptedHosts
      */
     public function __construct(
-        private readonly PlaywrightBrowser $browser,
+        private readonly BrowserRegistry $browser,
         private readonly HttpKernelInterface $kernel,
         private readonly RequestConverter $requestConverter,
         private readonly ResponseConverter $responseConverter,
@@ -84,7 +120,7 @@ class PlaywrightClient extends AbstractBrowser
         $this->logger = $logger ?? new NullLogger();
 
         if ($context = $this->browser->getContext()) {
-            \Playwright\Symfony\Util\CookieJarSync::fromContext($this->getCookieJar(), $context);
+            CookieJarSync::fromContext($this->getCookieJar(), $context);
         }
     }
 
@@ -102,7 +138,7 @@ class PlaywrightClient extends AbstractBrowser
         $page->goto($url);
 
         if ($context = $this->browser->getContext()) {
-            \Playwright\Symfony\Util\CookieJarSync::toJarFromUrl($this->getCookieJar(), $context, $page->url());
+            CookieJarSync::toJarFromUrl($this->getCookieJar(), $context, $page->url());
         }
 
         return $page;
@@ -119,7 +155,7 @@ class PlaywrightClient extends AbstractBrowser
     public function click(Link $link, array $serverParameters = []): Crawler
     {
         $this->ensureInterceptorSetUp();
-        $xpath = \Playwright\Symfony\Util\XPathHelper::buildXPath($link->getNode());
+        $xpath = XPathHelper::buildXPath($link->getNode());
         $page = $this->getPage();
         if (null === $page) {
             throw new \RuntimeException('No page available');
@@ -146,10 +182,10 @@ class PlaywrightClient extends AbstractBrowser
             throw new \RuntimeException('No page available');
         }
 
-        \Playwright\Symfony\Util\FormInteractor::fill($page, $form);
+        FormInteractor::fill($page, $form);
 
         // Submit via JS to trigger Playwright's network interception
-        $xpath = \Playwright\Symfony\Util\XPathHelper::buildXPath($form->getNode());
+        $xpath = XPathHelper::buildXPath($form->getNode());
         $page->locator('xpath='.$xpath)->evaluate('el => el.requestSubmit ? el.requestSubmit() : el.submit()');
 
         // Wait for any navigation to complete

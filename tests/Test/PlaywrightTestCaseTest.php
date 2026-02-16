@@ -20,9 +20,15 @@ use Playwright\Network\Request;
 use Playwright\Symfony\Client\RequestConverter;
 use Playwright\Symfony\Client\ResponseConverter;
 use Playwright\Symfony\Test\PlaywrightTestCase;
+use Playwright\Symfony\Tests\Fixtures\Client\FakeBrowserRegistry;
+use Playwright\Symfony\Tests\Fixtures\Client\FakePlaywrightKernelClient;
 use Playwright\Symfony\Tests\Fixtures\MockRequest;
 use Playwright\Symfony\Tests\Fixtures\Tests\ConcretePlaywrightTestCase;
+use Playwright\Symfony\Tests\Fixtures\Tests\TestablePlaywrightTestCase;
+use Psr\Log\NullLogger;
+use Symfony\Component\HttpFoundation\Request as SymfonyRequest;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 #[CoversClass(PlaywrightTestCase::class)]
 #[CoversClass(RequestConverter::class)]
@@ -30,12 +36,21 @@ use Symfony\Component\HttpFoundation\Response;
 class PlaywrightTestCaseTest extends TestCase
 {
     private ConcretePlaywrightTestCase $testCase;
+    private TestablePlaywrightTestCase $lifecycleTestCase;
+    private FakePlaywrightKernelClient $client;
+    private FakeBrowserRegistry $browser;
 
     protected function setUp(): void
     {
         $this->testCase = new ConcretePlaywrightTestCase('aa');
-        // Set up the default intercepted hosts since the mock kernel doesn't have a proper container
         $this->testCase->setInterceptedHosts(['localhost', '127.0.0.1', 'testapp.local']);
+
+        $this->lifecycleTestCase = new TestablePlaywrightTestCase('dummy');
+        $this->client = new FakePlaywrightKernelClient();
+        $this->browser = new FakeBrowserRegistry();
+        $this->lifecycleTestCase->setTestClient($this->client);
+        $this->lifecycleTestCase->setTestBrowser($this->browser);
+        $this->lifecycleTestCase->setTestLogger(new NullLogger());
     }
 
     public function testConvertToSymfonyRequestHandlesGetRequest(): void
@@ -244,5 +259,97 @@ class PlaywrightTestCaseTest extends TestCase
 
         putenv('PLAYWRIGHT_HEADLESS');
         $this->assertTrue($this->testCase->publicIsHeadless());
+    }
+
+    public function testMagicPropertyThrowsForUnknownName(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage("Property 'unknown' does not exist");
+
+        /* @phpstan-ignore-next-line - accessing undefined property intentionally */
+        $this->lifecycleTestCase->unknown;
+    }
+
+    public function testCookieAndAuthMethodsDelegateToClient(): void
+    {
+        $this->lifecycleTestCase->publicSetCookie('name', 'value', ['path' => '/test']);
+        $this->lifecycleTestCase->publicGetCookie('name', 'https://example.com');
+        $this->lifecycleTestCase->publicClearCookies();
+        $this->lifecycleTestCase->publicClearCookie('name', 'example.com', '/path');
+        $this->lifecycleTestCase->publicAuthenticate('user', ['role' => 'admin']);
+        $this->lifecycleTestCase->publicLogout();
+
+        $this->assertSame(
+            [
+                ['name', 'value', ['path' => '/test']],
+            ],
+            $this->client->calls['setCookie'] ?? []
+        );
+
+        $this->assertSame(
+            [
+                ['name', 'https://example.com'],
+            ],
+            $this->client->calls['getCookie'] ?? []
+        );
+
+        $this->assertSame([true], $this->client->calls['clearCookies'] ?? []);
+        $this->assertSame(
+            [
+                ['name', 'example.com', '/path'],
+            ],
+            $this->client->calls['clearCookie'] ?? []
+        );
+
+        $this->assertSame(
+            [
+                ['user', ['role' => 'admin']],
+            ],
+            $this->client->calls['authenticate'] ?? []
+        );
+
+        $this->assertSame([true], $this->client->calls['logout'] ?? []);
+    }
+
+    public function testLastRequestAndResponseDelegatesToClient(): void
+    {
+        $request = new SymfonyRequest();
+        $response = new SymfonyResponse('ok');
+
+        $this->client->lastRequest = $request;
+        $this->client->lastResponse = $response;
+
+        $this->assertSame($request, $this->lifecycleTestCase->publicGetLastRequest());
+        $this->assertSame($response, $this->lifecycleTestCase->publicGetLastResponse());
+    }
+
+    public function testLifecycleHooksAreCallable(): void
+    {
+        $request = new SymfonyRequest();
+        $response = new SymfonyResponse('ok');
+
+        $this->lifecycleTestCase->publicBeforeRequest($request);
+        $this->lifecycleTestCase->publicAfterResponse($response);
+        $this->lifecycleTestCase->publicLoadFixtures(['Fixture\\Class']);
+
+        $this->assertTrue(true); // If no exception is thrown, hooks are callable.
+    }
+
+    public function testTearDownDoesNotStopBrowser(): void
+    {
+        $this->lifecycleTestCase->setDebugLoggingFlag(true);
+
+        $this->lifecycleTestCase->callTearDown();
+
+        $this->assertFalse($this->browser->stopped, 'Browser should NOT be stopped during tearDown anymore');
+    }
+
+    public function testTearDownAfterClassStopsBrowser(): void
+    {
+        TestablePlaywrightTestCase::setSharedBrowser($this->browser);
+
+        TestablePlaywrightTestCase::tearDownAfterClass();
+
+        $this->assertTrue($this->browser->stopped, 'Browser should be stopped during tearDownAfterClass');
     }
 }

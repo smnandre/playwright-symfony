@@ -12,24 +12,44 @@ declare(strict_types=1);
  * file that was distributed with this source code.
  */
 
-namespace Playwright\Symfony\Browser;
+namespace Playwright\Symfony\Client;
 
 use Playwright\Browser\BrowserContextInterface;
 use Playwright\Page\PageInterface;
 use Playwright\Playwright;
 
 /**
- * Handles Playwright browser lifecycle and configuration.
+ * Registry for managing Playwright browser lifecycle, configuration, and shared instances.
  *
- * Responsibilities:
- * - Browser startup/shutdown
- * - Page creation and management
- * - Browser configuration (headless, type, etc.)
- * - Routing setup for request interception
+ * This class acts as a factory and lifecycle manager for Playwright browser contexts and pages.
+ * It handles browser startup, shutdown, context recreation, and provides a centralized point
+ * for browser configuration (browser type, headless mode, launch options).
+ *
+ * Primary role in architecture:
+ * - Used by PlaywrightTestCase to share a single browser instance across multiple tests
+ * - Provides browser context and page instances to PlaywrightKernelClient
+ * - Manages browser lifecycle hooks (start, stop, restartContext)
+ * - Configures request routing for the kernel-based interception flow
+ *
+ * Key responsibilities:
+ * - Start/stop Playwright browsers (chromium, firefox, webkit)
+ * - Create and manage browser contexts and pages
+ * - Restart contexts between tests for isolation while reusing browser instance (performance)
+ * - Set up routing callbacks for request interception via setupRouting()
+ * - Read configuration from environment variables (PLAYWRIGHT_BROWSER, PLAYWRIGHT_HEADLESS)
+ *
+ * Usage:
+ * - Typically instantiated via BrowserRegistry::fromEnvironment() in PlaywrightTestCase
+ * - Browser instance is shared across tests in the same test class (static $sharedBrowser)
+ * - Context is restarted between tests to ensure test isolation
+ *
+ * This is NOT a browser itself - it's a registry/manager that creates and holds browser instances.
+ *
+ * @internal Used by PlaywrightTestCase and PlaywrightKernelClient
  *
  * @author Simon André <smn.andre@gmail.com>
  */
-class PlaywrightBrowser
+class BrowserRegistry
 {
     private ?BrowserContextInterface $context = null;
     private ?PageInterface $page = null;

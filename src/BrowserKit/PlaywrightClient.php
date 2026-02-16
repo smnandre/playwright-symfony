@@ -16,6 +16,8 @@ namespace Playwright\Symfony\BrowserKit;
 
 use Playwright\Browser\BrowserContextInterface;
 use Playwright\Page\PageInterface;
+use Playwright\Symfony\Util\CookieJarSync;
+use Playwright\Symfony\Util\FormInteractor;
 use Playwright\Symfony\Util\XPathHelper;
 use Symfony\Component\BrowserKit\AbstractBrowser;
 use Symfony\Component\BrowserKit\CookieJar;
@@ -27,11 +29,62 @@ use Symfony\Component\DomCrawler\Form;
 use Symfony\Component\DomCrawler\Link;
 
 /**
- * A BrowserKit client backed by a real Playwright page.
+ * Public BrowserKit client for real browser testing with Playwright (no kernel routing).
  *
- * Notes:
- * - By default, uses "real-browser" semantics for navigation/click/submit.
- * - Builds a DomCrawler snapshot from the live DOM after each action.
+ * This is the standalone, public-facing client for using Playwright with Symfony's BrowserKit API.
+ * It performs real browser navigation via actual HTTP requests - there is NO request interception
+ * and NO routing through Symfony's HttpKernel.
+ *
+ * Primary role in architecture:
+ * - Public API for users who want BrowserKit compatibility with real Playwright browsers
+ * - Can be autowired from the container (registered by PlaywrightBundle)
+ * - Works with any website (internal or external) via real HTTP
+ * - Provides DomCrawler snapshots of the live DOM after each action
+ *
+ * Key differences from PlaywrightKernelClient:
+ * - Uses REAL HTTP requests (not in-process kernel routing)
+ * - Can test external websites and APIs
+ * - NO access to Symfony internals (no request/response inspection, no profiler)
+ * - Cookies synced between Playwright context and BrowserKit's CookieJar
+ *
+ * How it works:
+ * 1. User calls request('GET', 'https://example.com')
+ * 2. Playwright navigates via page->goto() → real HTTP request
+ * 3. Page loads with full browser behavior (JS, CSS, AJAX)
+ * 4. Client builds DomCrawler from page->content()
+ * 5. Returns Crawler for BrowserKit-compatible assertions
+ *
+ * Features:
+ * - Real browser semantics: click(), submit() use Playwright actions (not synthetic HTTP)
+ * - Handles popups: automatically switches to new tabs when links open them
+ * - Form handling: creates synthetic forms in-page to preserve browser events
+ * - Cookie sync: keeps BrowserKit CookieJar in sync with Playwright context
+ * - Server params: maps HTTP_* headers and PHP_AUTH_* credentials to Playwright
+ *
+ * When to use:
+ * - Testing external websites or APIs
+ * - Need real HTTP networking behavior
+ * - Want BrowserKit API with real browser (alternative to Symfony Panther)
+ * - Testing JavaScript-heavy applications
+ *
+ * When NOT to use:
+ * - Testing your Symfony app with access to internals → use PlaywrightTestCase instead
+ * - Need to inspect Symfony request/response → use PlaywrightKernelClient via PlaywrightTestCase
+ *
+ * Usage:
+ * ```php
+ * // Via dependency injection
+ * $client = $container->get(PlaywrightClient::class);
+ *
+ * // Or manual instantiation
+ * $context = Playwright::chromium();
+ * $client = PlaywrightClient::fromContext($context);
+ *
+ * // BrowserKit API
+ * $crawler = $client->request('GET', 'https://example.com');
+ * $link = $crawler->selectLink('Documentation')->link();
+ * $crawler = $client->click($link);
+ * ```
  *
  * @extends AbstractBrowser<Request, BrowserKitResponse>
  *
@@ -62,7 +115,7 @@ final class PlaywrightClient extends AbstractBrowser
         $this->context = $context;
         $this->page = $page;
 
-        \Playwright\Symfony\Util\CookieJarSync::fromContext($this->cookieJar, $this->context);
+        CookieJarSync::fromContext($this->cookieJar, $this->context);
     }
 
     /**
@@ -137,7 +190,7 @@ final class PlaywrightClient extends AbstractBrowser
             $form->setValues($values);
         }
 
-        \Playwright\Symfony\Util\FormInteractor::fill($this->page, $form);
+        FormInteractor::fill($this->page, $form);
 
         $this->handlePotentialPopup(function () use ($form): void {
             $xpath = XPathHelper::buildXPath($form->getNode());
@@ -154,7 +207,7 @@ final class PlaywrightClient extends AbstractBrowser
         $status = $playwrightResponse?->status() ?? 200;
         $headers = $playwrightResponse?->headers() ?? [];
 
-        \Playwright\Symfony\Util\CookieJarSync::toJarFromUrl($this->cookieJar, $this->context, $this->page->url());
+        CookieJarSync::toJarFromUrl($this->cookieJar, $this->context, $this->page->url());
 
         return $this->createBrowserKitResponse($content, $status, $headers);
     }
@@ -238,7 +291,7 @@ JS,
         $status = 200;
         $headers = [];
 
-        \Playwright\Symfony\Util\CookieJarSync::toJarFromUrl($this->cookieJar, $this->context, $this->page->url());
+        CookieJarSync::toJarFromUrl($this->cookieJar, $this->context, $this->page->url());
 
         return $this->createBrowserKitResponse($content, $status, $headers);
     }
@@ -249,7 +302,7 @@ JS,
         $status = 200;
         $headers = [];
 
-        \Playwright\Symfony\Util\CookieJarSync::toJarFromUrl($this->cookieJar, $this->context, $this->page->url());
+        CookieJarSync::toJarFromUrl($this->cookieJar, $this->context, $this->page->url());
         $this->lastResponse = $this->createBrowserKitResponse($content, $status, $headers);
 
         return new Crawler($content, $this->page->url());

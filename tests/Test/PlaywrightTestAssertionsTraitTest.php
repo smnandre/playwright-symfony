@@ -14,12 +14,14 @@ declare(strict_types=1);
 
 namespace Playwright\Symfony\Tests\Test;
 
+use PHPUnit\Framework\Attributes\CoversTrait;
 use PHPUnit\Framework\TestCase;
 use Playwright\Locator\LocatorInterface;
 use Playwright\Page\PageInterface;
 use Playwright\Symfony\Test\Assert\PlaywrightTestAssertionsTrait;
 use Symfony\Component\HttpFoundation\Response;
 
+#[CoversTrait(PlaywrightTestAssertionsTrait::class)]
 class PlaywrightTestAssertionsTraitTest extends TestCase
 {
     use PlaywrightTestAssertionsTrait;

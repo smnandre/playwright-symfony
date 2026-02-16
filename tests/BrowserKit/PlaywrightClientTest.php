@@ -15,14 +15,14 @@ declare(strict_types=1);
 namespace Playwright\Symfony\Tests\BrowserKit;
 
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\UsesClass;
 use PHPUnit\Framework\TestCase;
 use Playwright\Symfony\BrowserKit\PlaywrightClient;
 use Playwright\Symfony\Tests\Client\Fixtures\FakeBrowserContext;
+use Playwright\Symfony\Util\CookieJarSync;
 
-/**
- * @uses \Playwright\Symfony\Util\CookieJarSync
- */
 #[CoversClass(PlaywrightClient::class)]
+#[UsesClass(CookieJarSync::class)]
 final class PlaywrightClientTest extends TestCase
 {
     public function testFactorySeedsCookieJarAndNavigates(): void

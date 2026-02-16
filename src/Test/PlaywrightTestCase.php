@@ -15,9 +15,9 @@ declare(strict_types=1);
 namespace Playwright\Symfony\Test;
 
 use Playwright\Page\PageInterface;
-use Playwright\Symfony\Browser\PlaywrightBrowser;
+use Playwright\Symfony\Client\BrowserRegistry;
 use Playwright\Symfony\Client\Interception\AssetServer;
-use Playwright\Symfony\Client\PlaywrightClient;
+use Playwright\Symfony\Client\PlaywrightKernelClient;
 use Playwright\Symfony\Client\RequestConverter;
 use Playwright\Symfony\Client\ResponseConverter;
 use Playwright\Symfony\Test\Assert\PlaywrightTestAssertionsTrait;
@@ -29,7 +29,76 @@ use Symfony\Component\HttpFoundation\Request as SymfonyRequest;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 /**
- * Simplified test case that provides seamless DX while using the new component architecture.
+ * Base test case for E2E testing Symfony applications with Playwright and in-process kernel routing.
+ *
+ * This class provides a complete testing environment that combines:
+ * - Real Playwright browser (chromium/firefox/webkit) for authentic browser behavior
+ * - Symfony HttpKernel integration for in-process request handling
+ * - Access to Symfony internals (container, services, profiler, request/response)
+ * - BrowserKit-compatible API for familiar testing patterns
+ *
+ * Architecture overview:
+ * - Extends KernelTestCase → boots Symfony kernel in test environment
+ * - Creates shared BrowserRegistry → manages browser lifecycle across tests
+ * - Creates PlaywrightKernelClient → intercepts requests and routes through kernel
+ * - Provides $this->client for BrowserKit-style interactions
+ * - Provides $this->page for direct Playwright API access
+ *
+ * Key features:
+ * - Browser sharing: One browser instance per test class (performance optimization)
+ * - Context isolation: Browser context restarted between each test (clean state)
+ * - Request interception: All requests to localhost/127.0.0.1 routed through kernel
+ * - Asset optimization: Static assets served directly without kernel overhead
+ * - Hook system: beforeRequest() and afterResponse() for custom logic
+ *
+ * How request flow works:
+ * 1. Test calls visit('/login') or $this->client->request('GET', '/login')
+ * 2. Browser navigates to http://localhost/login
+ * 3. Request intercepted by PlaywrightKernelClient
+ * 4. AssetServer checks if it's a static asset → serves directly if yes
+ * 5. Otherwise: RequestConverter → HttpKernel->handle() → ResponseConverter
+ * 6. Response fulfilled in browser → page renders with full JS/CSS
+ * 7. Test can inspect: getLastRequest(), getLastResponse(), getProfile()
+ *
+ * Configuration:
+ * - Reads from bundle parameters: playwright.intercepted_hosts, playwright.base_url
+ * - Reads from environment: PLAYWRIGHT_E2E=1 (required), PLAYWRIGHT_BROWSER, PLAYWRIGHT_HEADLESS
+ * - Can configure via kernel container parameters
+ *
+ * Common methods:
+ * - visit(string $path): PageInterface → Navigate to path, returns Playwright page
+ * - $this->client → PlaywrightKernelClient for BrowserKit API
+ * - $this->page → Direct Playwright page access (magic property)
+ * - setCookie(), authenticate(), logout() → Helpers for auth testing
+ * - getLastRequest(), getLastResponse() → Inspect intercepted Symfony objects
+ * - beforeRequest(), afterResponse() → Override for custom hooks
+ *
+ * Example usage:
+ * ```php
+ * class LoginTest extends PlaywrightTestCase
+ * {
+ *     protected static function createKernel(array $options = []): KernelInterface
+ *     {
+ *         return new Kernel('test', false);
+ *     }
+ *
+ *     public function testUserCanLogin(): void
+ *     {
+ *         $page = $this->visit('/login');
+ *         $page->fill('#username', 'admin');
+ *         $page->fill('#password', 'secret');
+ *         $page->click('button[type="submit"]');
+ *
+ *         $this->assertPageContains('Welcome back');
+ *         $response = $this->getLastResponse();
+ *         $this->assertSame(200, $response->getStatusCode());
+ *     }
+ * }
+ * ```
+ *
+ * Requirements:
+ * - Set PLAYWRIGHT_E2E=1 environment variable (tests skipped otherwise)
+ * - Playwright browsers installed via: npx playwright install
  *
  * @author Simon André <smn.andre@gmail.com>
  */
@@ -37,9 +106,9 @@ abstract class PlaywrightTestCase extends KernelTestCase
 {
     use PlaywrightTestAssertionsTrait;
 
-    protected static ?PlaywrightBrowser $sharedBrowser = null;
-    protected PlaywrightBrowser $browser;
-    protected PlaywrightClient $client;
+    protected static ?BrowserRegistry $sharedBrowser = null;
+    protected BrowserRegistry $browser;
+    protected PlaywrightKernelClient $client;
     protected string $baseUrl = 'http://localhost';
     protected LoggerInterface $playwrightLogger;
     protected bool $debugLogging = false;
@@ -60,7 +129,7 @@ abstract class PlaywrightTestCase extends KernelTestCase
         $this->debugLogging = $this->resolveDebugLogging();
         $this->playwrightLogger = $this->resolveLogger();
 
-        $requestedBrowser = PlaywrightBrowser::fromEnvironment();
+        $requestedBrowser = BrowserRegistry::fromEnvironment();
         if (null !== self::$sharedBrowser && !self::$sharedBrowser->equals($requestedBrowser)) {
             self::$sharedBrowser->stop();
             self::$sharedBrowser = null;
@@ -85,7 +154,7 @@ abstract class PlaywrightTestCase extends KernelTestCase
             throw new \RuntimeException('Kernel must be booted before creating client');
         }
 
-        $this->client = new PlaywrightClient(
+        $this->client = new PlaywrightKernelClient(
             $this->browser,
             self::$kernel,
             new RequestConverter(),

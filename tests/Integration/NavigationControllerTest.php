@@ -14,12 +14,14 @@ declare(strict_types=1);
 
 namespace Playwright\Symfony\Tests\Integration;
 
+use PHPUnit\Framework\Attributes\CoversNothing;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 use Playwright\Symfony\Tests\Fixtures\App\TestKernel;
 use Symfony\Component\DomCrawler\Crawler;
 use Symfony\Component\HttpFoundation\Request;
 
+#[CoversNothing]
 final class NavigationControllerTest extends TestCase
 {
     #[RunInSeparateProcess]

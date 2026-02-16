@@ -45,8 +45,6 @@ final class PlaywrightExtension extends Extension
 
         $container->setParameter('playwright.intercepted_hosts', $config['intercepted_hosts']); // @phpstan-ignore argument.type
         $container->setParameter('playwright.debug', $config['debug']); // @phpstan-ignore argument.type
-        $container->setParameter('playwright.playwright_path', $config['playwright_path']); // @phpstan-ignore argument.type
-        $container->setParameter('playwright.node_path', $config['node_path']); // @phpstan-ignore argument.type
         $container->setParameter('playwright.base_url', $config['base_url']); // @phpstan-ignore argument.type
         $container->setParameter('playwright.debug_logging', $config['debug_logging']); // @phpstan-ignore argument.type
         $assetConfig = $config['assets'] ?? [];
@@ -60,7 +58,9 @@ final class PlaywrightExtension extends Extension
         /** @var array<string, mixed> $browsersConfig */
         $defaultBrowser = $config['default_browser'] ?? 'default';
         \assert(is_string($defaultBrowser));
-        $this->registerBrowsers($container, $browsersConfig, $defaultBrowser);
+        $globalNodePath = $config['node_path'] ?? 'node';
+        \assert(is_string($globalNodePath));
+        $this->registerBrowsers($container, $browsersConfig, $defaultBrowser, $globalNodePath);
 
         $container->register(BrowserKitClient::class, BrowserKitClient::class)
             ->setFactory([BrowserKitClient::class, 'fromContext'])
@@ -78,7 +78,7 @@ final class PlaywrightExtension extends Extension
     /**
      * @param array<string, mixed> $browsersConfig
      */
-    private function registerBrowsers(ContainerBuilder $container, array $browsersConfig, string $defaultBrowser): void
+    private function registerBrowsers(ContainerBuilder $container, array $browsersConfig, string $defaultBrowser, string $globalNodePath): void
     {
         if (!isset($browsersConfig[$defaultBrowser])) {
             $browsersConfig[$defaultBrowser] = [];
@@ -96,7 +96,7 @@ final class PlaywrightExtension extends Extension
             $serviceId = sprintf('playwright.browser.%s', $name);
 
             $configDef = new Definition(PlaywrightConfig::class);
-            $configArgs = $this->mapBrowserConfigArgs($browserConfig);
+            $configArgs = $this->mapBrowserConfigArgs($browserConfig, $globalNodePath);
             $configDef->setArguments($configArgs);
 
             $container->setDefinition($serviceId.'.config', $configDef);
@@ -126,7 +126,7 @@ final class PlaywrightExtension extends Extension
      *
      * @return array<int, mixed>
      */
-    private function mapBrowserConfigArgs(array $cfg): array
+    private function mapBrowserConfigArgs(array $cfg, string $globalNodePath): array
     {
         // PlaywrightConfig constructor signature:
         // (nodePath, minNodeVersion, browser, channel, headless, timeoutMs, slowMoMs, args, env,
@@ -145,7 +145,7 @@ final class PlaywrightExtension extends Extension
         $proxy = is_array($cfg['proxy'] ?? null) ? $cfg['proxy'] : null;
 
         $args = [
-            $cfg['node_path'] ?? null,
+            $cfg['node_path'] ?? $globalNodePath,
             $cfg['min_node_version'] ?? '18.0.0',
             $browserEnum,
             $cfg['channel'] ?? null,

@@ -16,9 +16,9 @@ namespace Playwright\Symfony\Tests\Client\Fixtures;
 
 use Playwright\Browser\BrowserContextInterface;
 use Playwright\Page\PageInterface;
-use Playwright\Symfony\Browser\PlaywrightBrowser;
+use Playwright\Symfony\Client\BrowserRegistry;
 
-class TestPlaywrightBrowser extends PlaywrightBrowser
+class TestBrowserRegistry extends BrowserRegistry
 {
     public function __construct(
         private BrowserContextInterface $context,

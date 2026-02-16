@@ -14,9 +14,11 @@ declare(strict_types=1);
 
 namespace Playwright\Symfony\Tests\Client\Interception;
 
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Playwright\Symfony\Client\Interception\AssetFile;
 
+#[CoversClass(AssetFile::class)]
 final class AssetFileTest extends TestCase
 {
     public function testConstructorWithAllParameters(): void

@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 namespace Playwright\Symfony\Tests\Integration;
 
+use PHPUnit\Framework\Attributes\CoversNothing;
 use Playwright\Symfony\Test\PlaywrightTestCase;
 use Playwright\Symfony\Tests\Fixtures\App\TestKernel;
 use Symfony\Component\HttpKernel\KernelInterface;
@@ -21,6 +22,7 @@ use Symfony\Component\HttpKernel\KernelInterface;
 /**
  * Integration test for the BrowserKit -> Playwright bridge.
  */
+#[CoversNothing]
 final class BrowserKitBridgeTest extends PlaywrightTestCase
 {
     protected static function createKernel(array $options = []): KernelInterface

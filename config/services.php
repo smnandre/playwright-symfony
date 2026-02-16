@@ -15,9 +15,6 @@ declare(strict_types=1);
 use Playwright\Symfony\Asset\AssetMapperProxy;
 use Playwright\Symfony\Asset\FilesystemProxy;
 use Playwright\Symfony\Client\Interception\AssetServer;
-use Playwright\Symfony\Client\RequestConverter;
-use Playwright\Symfony\Client\ResponseConverter;
-use Playwright\Symfony\Command\DebugPlaywrightCommand;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 
 use function Symfony\Component\DependencyInjection\Loader\Configurator\param;
@@ -28,9 +25,6 @@ return static function (ContainerConfigurator $container): void {
         ->defaults()
             ->autowire()
             ->autoconfigure();
-
-    $services->set(RequestConverter::class);
-    $services->set(ResponseConverter::class);
 
     $services->set(FilesystemProxy::class)
         ->arg('$publicRoots', param('playwright.asset_public_roots'));
@@ -48,6 +42,4 @@ return static function (ContainerConfigurator $container): void {
             param('playwright.asset_prefixes'),
             param('playwright.asset_dev_no_cache'),
         ]);
-
-    $services->set(DebugPlaywrightCommand::class);
 };

@@ -15,39 +15,35 @@ declare(strict_types=1);
 namespace Playwright\Symfony\Tests\Client;
 
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\UsesClass;
 use PHPUnit\Framework\TestCase;
-use Playwright\Symfony\Browser\PlaywrightBrowser;
+use Playwright\Symfony\Client\BrowserRegistry;
 use Playwright\Symfony\Client\Interception\AssetFile;
 use Playwright\Symfony\Client\Interception\AssetLocatorInterface;
 use Playwright\Symfony\Client\Interception\AssetServer;
-use Playwright\Symfony\Client\PlaywrightClient;
+use Playwright\Symfony\Client\PlaywrightKernelClient;
 use Playwright\Symfony\Client\RequestConverter;
 use Playwright\Symfony\Client\ResponseConverter;
 use Playwright\Symfony\Tests\Client\Fixtures\FakeBrowserContext;
 use Playwright\Symfony\Tests\Client\Fixtures\FakeLogger;
 use Playwright\Symfony\Tests\Client\Fixtures\FakePage;
-use Playwright\Symfony\Tests\Client\Fixtures\TestPlaywrightBrowser;
+use Playwright\Symfony\Tests\Client\Fixtures\TestBrowserRegistry;
 use Playwright\Symfony\Tests\Fixtures\MockRequest;
+use Playwright\Symfony\Util\CookieJarSync;
 use Symfony\Component\HttpFoundation\Request as SymfonyRequest;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
 
-/**
- * @uses \Playwright\Symfony\Util\CookieJarSync
- * @uses \Playwright\Symfony\Util\FormInteractor
- * @uses \Playwright\Symfony\Util\XPathHelper
- * @uses \Playwright\Symfony\Client\Interception\AssetServer
- * @uses \Playwright\Symfony\Client\Interception\AssetFile
- */
-#[CoversClass(PlaywrightClient::class)]
-#[CoversClass(PlaywrightBrowser::class)]
+#[CoversClass(PlaywrightKernelClient::class)]
+#[CoversClass(BrowserRegistry::class)]
 #[CoversClass(RequestConverter::class)]
 #[CoversClass(ResponseConverter::class)]
 #[CoversClass(AssetServer::class)]
 #[CoversClass(AssetFile::class)]
-class PlaywrightClientTest extends TestCase
+#[UsesClass(CookieJarSync::class)]
+class PlaywrightKernelClientTest extends TestCase
 {
-    private TestPlaywrightBrowser $browser;
+    private TestBrowserRegistry $browser;
     private FakeBrowserContext $context;
     private FakePage $page;
 
@@ -55,12 +51,12 @@ class PlaywrightClientTest extends TestCase
     {
         $this->context = new FakeBrowserContext();
         $this->page = new FakePage($this->context);
-        $this->browser = new TestPlaywrightBrowser($this->context, $this->page);
+        $this->browser = new TestBrowserRegistry($this->context, $this->page);
     }
 
     public function testVisitNavigatesAndReturnsPage(): void
     {
-        $client = new PlaywrightClient(
+        $client = new PlaywrightKernelClient(
             $this->browser,
             new class implements HttpKernelInterface {
                 public function handle(SymfonyRequest $request, int $type = self::MAIN_REQUEST, bool $catch = true): SymfonyResponse
@@ -80,7 +76,7 @@ class PlaywrightClientTest extends TestCase
 
     public function testVisitRespectsCustomBaseUrl(): void
     {
-        $client = new PlaywrightClient(
+        $client = new PlaywrightKernelClient(
             $this->browser,
             new class implements HttpKernelInterface {
                 public function handle(SymfonyRequest $request, int $type = self::MAIN_REQUEST, bool $catch = true): SymfonyResponse
@@ -130,7 +126,7 @@ class PlaywrightClientTest extends TestCase
             }
         };
 
-        $client = new PlaywrightClient(
+        $client = new PlaywrightKernelClient(
             $this->browser,
             $kernel,
             new RequestConverter(),
@@ -158,7 +154,7 @@ class PlaywrightClientTest extends TestCase
 
     public function testNonInterceptedRequestContinues(): void
     {
-        $client = new PlaywrightClient(
+        $client = new PlaywrightKernelClient(
             $this->browser,
             new class implements HttpKernelInterface {
                 public function handle(SymfonyRequest $request, int $type = self::MAIN_REQUEST, bool $catch = true): SymfonyResponse
@@ -209,7 +205,7 @@ class PlaywrightClientTest extends TestCase
 
         $assetServer = new AssetServer([$locator], ['/assets'], true);
 
-        $client = new PlaywrightClient(
+        $client = new PlaywrightKernelClient(
             $this->browser,
             $kernel,
             new RequestConverter(),
@@ -235,7 +231,7 @@ class PlaywrightClientTest extends TestCase
     {
         $logger = new FakeLogger();
 
-        $client = new PlaywrightClient(
+        $client = new PlaywrightKernelClient(
             $this->browser,
             new class implements HttpKernelInterface {
                 public function handle(SymfonyRequest $request, int $type = self::MAIN_REQUEST, bool $catch = true): SymfonyResponse
@@ -269,7 +265,7 @@ class PlaywrightClientTest extends TestCase
     {
         $logger = new FakeLogger();
 
-        $client = new PlaywrightClient(
+        $client = new PlaywrightKernelClient(
             $this->browser,
             new class implements HttpKernelInterface {
                 public function handle(SymfonyRequest $request, int $type = self::MAIN_REQUEST, bool $catch = true): SymfonyResponse
@@ -297,7 +293,7 @@ class PlaywrightClientTest extends TestCase
 
     public function testCookieHelpersWorkWithContext(): void
     {
-        $client = new PlaywrightClient(
+        $client = new PlaywrightKernelClient(
             $this->browser,
             new class implements HttpKernelInterface {
                 public function handle(SymfonyRequest $request, int $type = self::MAIN_REQUEST, bool $catch = true): SymfonyResponse

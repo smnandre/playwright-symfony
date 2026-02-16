@@ -39,7 +39,6 @@ final class ConfigurationTest extends TestCase
         $this->assertTrue($config['enabled']);
         $this->assertEquals(['localhost', '127.0.0.1', 'testapp.local'], $config['intercepted_hosts']);
         $this->assertEquals('%kernel.debug%', $config['debug']);
-        $this->assertEquals('npx playwright', $config['playwright_path']);
         $this->assertEquals('node', $config['node_path']);
 
         $this->assertArrayHasKey('browsers', $config);
@@ -142,16 +141,14 @@ final class ConfigurationTest extends TestCase
         $this->processor->processConfiguration($this->configuration, [$inputConfig]);
     }
 
-    public function testCustomBinaryPaths(): void
+    public function testCustomNodePath(): void
     {
         $inputConfig = [
-            'playwright_path' => '/usr/local/bin/playwright',
             'node_path' => '/usr/local/bin/node',
         ];
 
         $config = $this->processor->processConfiguration($this->configuration, [$inputConfig]);
 
-        $this->assertEquals('/usr/local/bin/playwright', $config['playwright_path']);
         $this->assertEquals('/usr/local/bin/node', $config['node_path']);
     }
 

@@ -12,13 +12,13 @@ declare(strict_types=1);
  * file that was distributed with this source code.
  */
 
-namespace Playwright\Symfony\Tests\Fixtures\Browser;
+namespace Playwright\Symfony\Tests\Fixtures\Client;
 
 use Playwright\Browser\BrowserContextInterface;
 use Playwright\Page\PageInterface;
-use Playwright\Symfony\Browser\PlaywrightBrowser;
+use Playwright\Symfony\Client\BrowserRegistry;
 
-final class FakePlaywrightBrowser extends PlaywrightBrowser
+final class FakeBrowserRegistry extends BrowserRegistry
 {
     public bool $stopped = false;
 

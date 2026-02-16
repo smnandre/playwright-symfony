@@ -14,12 +14,14 @@ declare(strict_types=1);
 
 namespace Playwright\Symfony\Tests\Client;
 
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Playwright\Symfony\Client\ResponseConverter;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
+#[CoversClass(ResponseConverter::class)]
 class ResponseConverterTest extends TestCase
 {
     private ResponseConverter $converter;

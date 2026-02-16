@@ -14,11 +14,13 @@ declare(strict_types=1);
 
 namespace Playwright\Symfony\Tests\Integration;
 
+use PHPUnit\Framework\Attributes\CoversNothing;
 use PHPUnit\Framework\TestCase;
 use Playwright\Symfony\DependencyInjection\PlaywrightExtension;
 use Playwright\Symfony\PlaywrightSymfonyBundle;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 
+#[CoversNothing]
 class BundleIntegrationTest extends TestCase
 {
     private ContainerBuilder $container;
@@ -77,16 +79,12 @@ class BundleIntegrationTest extends TestCase
         $config = [
             'debug' => false,
             'intercepted_hosts' => ['example.com', 'test.local'],
-            'playwright_path' => '/custom/playwright',
-            'node_path' => '/custom/node',
         ];
 
         $this->extension->load([$config], $this->container);
 
         $this->assertEquals(false, $this->container->getParameter('playwright.debug'));
         $this->assertEquals(['example.com', 'test.local'], $this->container->getParameter('playwright.intercepted_hosts'));
-        $this->assertEquals('/custom/playwright', $this->container->getParameter('playwright.playwright_path'));
-        $this->assertEquals('/custom/node', $this->container->getParameter('playwright.node_path'));
     }
 
     public function testParametersAreSetCorrectly(): void
@@ -94,15 +92,11 @@ class BundleIntegrationTest extends TestCase
         $config = [
             'debug' => true,
             'intercepted_hosts' => ['localhost'],
-            'playwright_path' => 'custom-playwright',
-            'node_path' => 'custom-node',
         ];
 
         $this->extension->load([$config], $this->container);
 
         $this->assertTrue($this->container->getParameter('playwright.debug'));
         $this->assertSame(['localhost'], $this->container->getParameter('playwright.intercepted_hosts'));
-        $this->assertSame('custom-playwright', $this->container->getParameter('playwright.playwright_path'));
-        $this->assertSame('custom-node', $this->container->getParameter('playwright.node_path'));
     }
 }

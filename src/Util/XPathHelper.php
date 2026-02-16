@@ -22,28 +22,23 @@ namespace Playwright\Symfony\Util;
 final class XPathHelper
 {
     /**
-     * Build a robust absolute XPath for a DOMElement.
+     * Build an absolute XPath for a DOMElement.
      * This mirrors typical DOM to XPath strategies (tag + position among siblings).
      */
     public static function buildXPath(\DOMElement $node): string
     {
         $segments = [];
 
-        for ($n = $node; null !== $n && XML_ELEMENT_NODE === $n->nodeType; $n = $n->parentNode) {
+        for ($n = $node; $n instanceof \DOMElement; $n = $n->parentNode) {
             $index = 1;
-            $sibling = $n->previousSibling;
-            while ($sibling) {
-                if (XML_ELEMENT_NODE === $sibling->nodeType && $sibling->nodeName === $n->nodeName) {
+            for ($sibling = $n->previousElementSibling; null !== $sibling; $sibling = $sibling->previousElementSibling) {
+                if ($sibling->nodeName === $n->nodeName) {
                     ++$index;
                 }
-                $sibling = $sibling->previousSibling;
             }
-            $tag = $n->nodeName;
-            $segments[] = sprintf('%s[%d]', $tag, $index);
+            $segments[] = sprintf('%s[%d]', $n->nodeName, $index);
         }
 
-        $segments = array_reverse($segments);
-
-        return '//'.implode('/', $segments);
+        return '//'.implode('/', array_reverse($segments));
     }
 }

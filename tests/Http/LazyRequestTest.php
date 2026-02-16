@@ -14,9 +14,11 @@ declare(strict_types=1);
 
 namespace Playwright\Symfony\Tests\Http;
 
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Playwright\Symfony\Http\LazyRequest;
 
+#[CoversClass(LazyRequest::class)]
 class LazyRequestTest extends TestCase
 {
     public function testUrlSupportsStringCallableAndDefault(): void

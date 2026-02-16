@@ -15,11 +15,11 @@ declare(strict_types=1);
 namespace Playwright\Symfony\Tests\Fixtures\Client;
 
 use Playwright\Page\PageInterface;
-use Playwright\Symfony\Client\PlaywrightClient;
+use Playwright\Symfony\Client\PlaywrightKernelClient;
 use Symfony\Component\HttpFoundation\Request as SymfonyRequest;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
-final class FakePlaywrightClient extends PlaywrightClient
+final class FakePlaywrightKernelClient extends PlaywrightKernelClient
 {
     /** @var array<string, array<int, mixed>> */
     public array $calls = [];
@@ -82,13 +82,13 @@ final class FakePlaywrightClient extends PlaywrightClient
     {
         $this->calls['visit'][] = $path;
 
-        throw new \BadMethodCallException('Not implemented in FakePlaywrightClient');
+        throw new \BadMethodCallException('Not implemented in FakePlaywrightKernelClient');
     }
 
     public function getPage(): PageInterface
     {
         $this->calls['getPage'][] = true;
 
-        throw new \BadMethodCallException('Not implemented in FakePlaywrightClient');
+        throw new \BadMethodCallException('Not implemented in FakePlaywrightKernelClient');
     }
 }

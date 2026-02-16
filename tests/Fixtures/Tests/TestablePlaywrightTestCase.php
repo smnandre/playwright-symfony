@@ -14,9 +14,9 @@ declare(strict_types=1);
 
 namespace Playwright\Symfony\Tests\Fixtures\Tests;
 
-use Playwright\Symfony\Browser\PlaywrightBrowser;
+use Playwright\Symfony\Client\BrowserRegistry;
 use Playwright\Symfony\Client\Interception\AssetServer;
-use Playwright\Symfony\Client\PlaywrightClient;
+use Playwright\Symfony\Client\PlaywrightKernelClient;
 use Playwright\Symfony\Test\PlaywrightTestCase;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\Request;
@@ -128,17 +128,17 @@ class TestablePlaywrightTestCase extends PlaywrightTestCase
         };
     }
 
-    public function setTestClient(PlaywrightClient $client): void
+    public function setTestClient(PlaywrightKernelClient $client): void
     {
         $this->client = $client;
     }
 
-    public function setTestBrowser(PlaywrightBrowser $browser): void
+    public function setTestBrowser(BrowserRegistry $browser): void
     {
         $this->browser = $browser;
     }
 
-    public static function setSharedBrowser(?PlaywrightBrowser $browser): void
+    public static function setSharedBrowser(?BrowserRegistry $browser): void
     {
         self::$sharedBrowser = $browser;
     }
