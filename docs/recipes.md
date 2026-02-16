@@ -9,11 +9,11 @@ You may want different timeout or `slowmo` settings in CI vs local development.
 ```yaml
 # config/packages/test/playwright.yaml
 playwright:
-    browsers:
-        default:
-            # Local: headless off, slowmo on
-            headless: '%env(bool:default:false:PLAYWRIGHT_HEADLESS)%'
-            slowmo_ms: '%env(int:default:0:PLAYWRIGHT_SLOWMO)%'
+  browsers:
+    default:
+      # Local: headless off, slowmo on
+      headless: '%env(bool:default:false:PLAYWRIGHT_HEADLESS)%'
+      slowmo_ms: '%env(int:default:0:PLAYWRIGHT_SLOWMO)%'
 ```
 
 ## Caching Responses
@@ -44,7 +44,8 @@ public function testWithMockedExternalApi(): void
 
 ## Persistent Storage (Authentication)
 
-Instead of calling `$this->authenticate()` in every test, you can reuse a Playwright storage state (cookies + localStorage).
+Instead of calling `$this->authenticate()` in every test, you can reuse a Playwright storage state (cookies +
+localStorage).
 
 ```php
 public function testWithStorageState(): void
@@ -65,15 +66,16 @@ You can configure a specific browser for mobile testing in your `playwright.yaml
 
 ```yaml
 playwright:
-    browsers:
-        iphone:
-            type: 'webkit'
-            args:
-                - '--viewport-width=390'
-                - '--viewport-height=844'
+  browsers:
+    iphone:
+      type: 'webkit'
+      args:
+        - '--viewport-width=390'
+        - '--viewport-height=844'
 ```
 
 Then in your test:
+
 ```php
 public function testMobileLayout(): void
 {

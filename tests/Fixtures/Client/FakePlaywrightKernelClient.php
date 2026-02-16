@@ -26,6 +26,8 @@ final class FakePlaywrightKernelClient extends PlaywrightKernelClient
 
     public ?SymfonyRequest $lastRequest = null;
     public ?SymfonyResponse $lastResponse = null;
+    public ?PageInterface $page = null;
+    public string $baseUrl = 'http://localhost';
 
     public function __construct()
     {
@@ -80,15 +82,20 @@ final class FakePlaywrightKernelClient extends PlaywrightKernelClient
 
     public function visit(string $path): PageInterface
     {
-        $this->calls['visit'][] = $path;
+        $this->calls['visit'][] = [$path];
 
-        throw new \BadMethodCallException('Not implemented in FakePlaywrightKernelClient');
+        return $this->page;
     }
 
-    public function getPage(): PageInterface
+    public function getPage(): ?PageInterface
     {
         $this->calls['getPage'][] = true;
 
-        throw new \BadMethodCallException('Not implemented in FakePlaywrightKernelClient');
+        return $this->page;
+    }
+
+    public function getBaseUrl(): string
+    {
+        return $this->baseUrl;
     }
 }

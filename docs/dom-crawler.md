@@ -1,18 +1,22 @@
 # DomCrawler Integration
 
-The Playwright Symfony bundle provides full support for Symfony's `DomCrawler` component. This allows you to use the familiar selection and extraction API from `WebTestCase` while driving a real, JavaScript-enabled browser.
+The Playwright Symfony bundle provides full support for Symfony's `DomCrawler` component. This allows you to use the
+familiar selection and extraction API from `WebTestCase` while driving a real, JavaScript-enabled browser.
 
 ## How it Works
 
-The integration bridges the gap between the static HTML snapshots used by `DomCrawler` and the live, interactive DOM of a real browser.
+The integration bridges the gap between the static HTML snapshots used by `DomCrawler` and the live, interactive DOM of
+a real browser.
 
-1.  **Selection**: Use CSS or XPath selectors via the Crawler to find elements.
-2.  **Extraction**: Extract standard Symfony `Link` or `Form` objects.
-3.  **Interaction**: Pass these objects back to the client. The client automatically translates them into Playwright locators, performs the action in the browser, and returns a fresh Crawler for the new page state.
+1. **Selection**: Use CSS or XPath selectors via the Crawler to find elements.
+2. **Extraction**: Extract standard Symfony `Link` or `Form` objects.
+3. **Interaction**: Pass these objects back to the client. The client automatically translates them into Playwright
+   locators, performs the action in the browser, and returns a fresh Crawler for the new page state.
 
 ## Basic Usage
 
-In a `PlaywrightTestCase`, the `$this->client` (and the magic `$this->page` property) work together to provide this bridge.
+In a `PlaywrightTestCase`, the `$this->client` (and the magic `$this->page` property) work together to provide this
+bridge.
 
 ```php
 public function testNavigationWithDomCrawler(): void
@@ -37,7 +41,8 @@ public function testNavigationWithDomCrawler(): void
 
 ## Form Handling
 
-Interacting with complex forms is simplified by the `DomCrawler` integration. It handles all input types, including selects, checkboxes, and file uploads.
+Interacting with complex forms is simplified by the `DomCrawler` integration. It handles all input types, including
+selects, checkboxes, and file uploads.
 
 ```php
 public function testFormSubmission(): void
@@ -61,17 +66,25 @@ public function testFormSubmission(): void
 ## Benefits of the Bridge
 
 ### Familiar API
-You don't need to learn a new selection API. All the power of `filter()`, `filterXPath()`, `selectLink()`, and `selectButton()` is available.
+
+You don't need to learn a new selection API. All the power of `filter()`, `filterXPath()`, `selectLink()`, and
+`selectButton()` is available.
 
 ### Real Browser Fidelity
+
 Unlike standard `WebTestCase`, calling `click()` or `submit()` through the bridge:
+
 - Triggers JavaScript `click` and `submit` events.
 - Handles AJAX requests triggered by those events.
 - Executes CSS transitions and animations.
 - Respects `target="_blank"` and other browser-native behaviors.
 
 ### Automatic State Synchronization
-The bridge includes a synchronization layer (`CookieJarSync`) that ensures cookies set by the browser (via JS) and cookies set by Symfony (via Headers) are always consistent within your test session.
+
+The bridge includes a synchronization layer (`CookieJarSync`) that ensures cookies set by the browser (via JS) and
+cookies set by Symfony (via Headers) are always consistent within your test session.
 
 ### Asynchronous Resilience
-The client includes built-in retry logic to handle cases where the Crawler attempts to retrieve content while the browser is still actively navigating or rendering a page.
+
+The client includes built-in retry logic to handle cases where the Crawler attempts to retrieve content while the
+browser is still actively navigating or rendering a page.

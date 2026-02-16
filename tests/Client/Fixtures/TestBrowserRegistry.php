@@ -21,8 +21,8 @@ use Playwright\Symfony\Client\BrowserRegistry;
 class TestBrowserRegistry extends BrowserRegistry
 {
     public function __construct(
-        private BrowserContextInterface $context,
-        private PageInterface $page,
+        private ?BrowserContextInterface $context,
+        private ?PageInterface $page,
         string $browserType = 'chromium',
         bool $headless = true,
         array $launchOptions = [],
@@ -50,6 +50,8 @@ class TestBrowserRegistry extends BrowserRegistry
 
     public function setupRouting(callable $routeHandler): void
     {
-        $this->page->route('**/*', $routeHandler);
+        if ($this->page) {
+            $this->page->route('**/*', $routeHandler);
+        }
     }
 }

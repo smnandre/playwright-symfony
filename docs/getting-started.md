@@ -18,9 +18,11 @@ composer require --dev playwright-php/playwright-symfony
 
 ### 2. Set Up Playwright
 
-After installing the bundle via Composer, you must initialize the Playwright environment. The bundle leverages the core `playwright-php` installation scripts.
+After installing the bundle via Composer, you must initialize the Playwright environment. The bundle leverages the core
+`playwright-php` installation scripts.
 
 #### A. Initialize Playwright PHP
+
 This command sets up the necessary Node.js bridge and internal dependencies:
 
 ```bash
@@ -28,14 +30,17 @@ vendor/bin/playwright-install
 ```
 
 #### B. Install Browsers
+
 Download the required browser binaries (Chromium, Firefox, WebKit). You have two options depending on your environment:
 
 **For Local Development:**
+
 ```bash
 vendor/bin/playwright-install --browsers
 ```
 
 **For CI or Fresh Servers (Includes OS Dependencies):**
+
 ```bash
 vendor/bin/playwright-install --with-deps
 ```
@@ -70,7 +75,8 @@ class HomepageTest extends PlaywrightTestCase
 
 ## Running the Suite
 
-By default, browser tests are skipped to ensure your standard test suite remains fast. Use the `PLAYWRIGHT_E2E` environment variable to enable them.
+By default, browser tests are skipped to ensure your standard test suite remains fast. Use the `PLAYWRIGHT_E2E`
+environment variable to enable them.
 
 ```bash
 PLAYWRIGHT_E2E=1 vendor/bin/phpunit

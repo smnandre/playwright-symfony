@@ -1,6 +1,7 @@
 # BrowserKit + DomCrawler bridge for Playwright
 
-This bridge provides a Symfony BrowserKit client backed by a real Playwright browser/page. It returns Symfony DomCrawler snapshots after each action.
+This bridge provides a Symfony BrowserKit client backed by a real Playwright browser/page. It returns Symfony DomCrawler
+snapshots after each action.
 
 ## Why
 
@@ -42,17 +43,23 @@ $crawler = $client->submit($form);
 
 ## Options
 
-- `followPopups`: when a click opens a new tab, the client switches to it (Panther-like). You can turn it off if you prefer single-tab only.
+- `followPopups`: when a click opens a new tab, the client switches to it (Panther-like). You can turn it off if you
+  prefer single-tab only.
 
 ## Container integration
 
-With the Symfony bundle enabled, you can autowire `Playwright\Symfony\BrowserKit\PlaywrightClient` (service id `Playwright\Symfony\BrowserKit\PlaywrightClient`) directly from the container. The bundle registers it using the default Playwright browser context, so tests can type-hint it in constructors or fetch it via `$this->getContainer()->get(...)` without manual wiring.
+With the Symfony bundle enabled, you can autowire `Playwright\Symfony\BrowserKit\PlaywrightClient` (service id
+`Playwright\Symfony\BrowserKit\PlaywrightClient`) directly from the container. The bundle registers it using the default
+Playwright browser context, so tests can type-hint it in constructors or fetch it via `$this->getContainer()->get(...)`
+without manual wiring.
 
 ## Limitations
 
-- SPA navigation without full page reload may not produce a Playwright Response; the bridge returns 200 with available headers.
+- SPA navigation without full page reload may not produce a Playwright Response; the bridge returns 200 with available
+  headers.
 - Exact mapping of BrowserKit server params to headers/credentials is best-effort.
-- Targeting elements relies on XPath from DomCrawler snapshot; if the DOM changes drastically before click, resolution may fail.
+- Targeting elements relies on XPath from DomCrawler snapshot; if the DOM changes drastically before click, resolution
+  may fail.
 
 ## Roadmap
 

@@ -58,6 +58,13 @@ class FakePage implements PageInterface
         return $route;
     }
 
+    public function triggerRequestWithInvalidRoute(object $route): void
+    {
+        if ($this->routeHandler) {
+            ($this->routeHandler)($route);
+        }
+    }
+
     public function locator(string $selector, \Playwright\Locator\Options\LocatorOptions|array $options = []): LocatorInterface
     {
         return new MockLocator($this, $selector);

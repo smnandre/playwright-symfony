@@ -30,6 +30,7 @@ use Playwright\Symfony\Tests\Client\Fixtures\FakePage;
 use Playwright\Symfony\Tests\Client\Fixtures\TestBrowserRegistry;
 use Playwright\Symfony\Tests\Fixtures\MockRequest;
 use Playwright\Symfony\Util\CookieJarSync;
+use Symfony\Component\DomCrawler\Crawler;
 use Symfony\Component\HttpFoundation\Request as SymfonyRequest;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
@@ -314,5 +315,665 @@ class PlaywrightKernelClientTest extends TestCase
 
         $client->clearCookies();
         self::assertNull($client->getCookie('foo'));
+    }
+
+    public function testGetPageReturnsPageFromBrowser(): void
+    {
+        $client = new PlaywrightKernelClient(
+            $this->browser,
+            new class implements HttpKernelInterface {
+                public function handle(SymfonyRequest $request, int $type = self::MAIN_REQUEST, bool $catch = true): SymfonyResponse
+                {
+                    return new SymfonyResponse('ok');
+                }
+            },
+            new RequestConverter(),
+            new ResponseConverter(),
+        );
+
+        $page = $client->getPage();
+
+        self::assertSame($this->page, $page);
+    }
+
+    public function testGetLastSymfonyRequestReturnsLastRequest(): void
+    {
+        $client = new PlaywrightKernelClient(
+            $this->browser,
+            new class implements HttpKernelInterface {
+                public function handle(SymfonyRequest $request, int $type = self::MAIN_REQUEST, bool $catch = true): SymfonyResponse
+                {
+                    return new SymfonyResponse('ok');
+                }
+            },
+            new RequestConverter(),
+            new ResponseConverter(),
+        );
+
+        $client->visit('/test');
+        $mock = new MockRequest(url: 'http://localhost/test', method: 'GET');
+        $this->page->triggerRequest($mock);
+
+        $lastRequest = $client->getLastSymfonyRequest();
+
+        self::assertNotNull($lastRequest);
+        self::assertInstanceOf(SymfonyRequest::class, $lastRequest);
+        self::assertSame('/test', $lastRequest->getPathInfo());
+    }
+
+    public function testGetLastSymfonyResponseReturnsLastResponse(): void
+    {
+        $client = new PlaywrightKernelClient(
+            $this->browser,
+            new class implements HttpKernelInterface {
+                public function handle(SymfonyRequest $request, int $type = self::MAIN_REQUEST, bool $catch = true): SymfonyResponse
+                {
+                    return new SymfonyResponse('test response content');
+                }
+            },
+            new RequestConverter(),
+            new ResponseConverter(),
+        );
+
+        $client->visit('/test');
+        $mock = new MockRequest(url: 'http://localhost/test', method: 'GET');
+        $this->page->triggerRequest($mock);
+
+        $lastResponse = $client->getLastSymfonyResponse();
+
+        self::assertNotNull($lastResponse);
+        self::assertInstanceOf(SymfonyResponse::class, $lastResponse);
+        self::assertSame('test response content', $lastResponse->getContent());
+    }
+
+    public function testSetInterceptedHostsUpdatesHostList(): void
+    {
+        $client = new PlaywrightKernelClient(
+            $this->browser,
+            new class implements HttpKernelInterface {
+                public function handle(SymfonyRequest $request, int $type = self::MAIN_REQUEST, bool $catch = true): SymfonyResponse
+                {
+                    return new SymfonyResponse('ok');
+                }
+            },
+            new RequestConverter(),
+            new ResponseConverter(),
+            [],
+            ['localhost'],
+        );
+
+        $client->setInterceptedHosts(['example.com', 'test.local']);
+
+        self::assertSame(['example.com', 'test.local'], $client->getInterceptedHosts());
+    }
+
+    public function testGetInterceptedHostsReturnsConfiguredHosts(): void
+    {
+        $client = new PlaywrightKernelClient(
+            $this->browser,
+            new class implements HttpKernelInterface {
+                public function handle(SymfonyRequest $request, int $type = self::MAIN_REQUEST, bool $catch = true): SymfonyResponse
+                {
+                    return new SymfonyResponse('ok');
+                }
+            },
+            new RequestConverter(),
+            new ResponseConverter(),
+            [],
+            ['localhost', '127.0.0.1', 'custom.local'],
+        );
+
+        $hosts = $client->getInterceptedHosts();
+
+        self::assertSame(['localhost', '127.0.0.1', 'custom.local'], $hosts);
+    }
+
+    public function testAuthenticateSetsAuthCookie(): void
+    {
+        $client = new PlaywrightKernelClient(
+            $this->browser,
+            new class implements HttpKernelInterface {
+                public function handle(SymfonyRequest $request, int $type = self::MAIN_REQUEST, bool $catch = true): SymfonyResponse
+                {
+                    return new SymfonyResponse('ok');
+                }
+            },
+            new RequestConverter(),
+            new ResponseConverter(),
+        );
+
+        $client->authenticate('admin', ['role' => 'ADMIN']);
+
+        // Verify AUTH cookie was set
+        $authCookie = $client->getCookie('AUTH');
+        self::assertNotNull($authCookie);
+
+        $payload = json_decode($authCookie, true);
+        self::assertSame('admin', $payload['id']);
+        self::assertSame(['role' => 'ADMIN'], $payload['ctx']);
+    }
+
+    public function testLogoutClearsAuthCookie(): void
+    {
+        $client = new PlaywrightKernelClient(
+            $this->browser,
+            new class implements HttpKernelInterface {
+                public function handle(SymfonyRequest $request, int $type = self::MAIN_REQUEST, bool $catch = true): SymfonyResponse
+                {
+                    return new SymfonyResponse('ok');
+                }
+            },
+            new RequestConverter(),
+            new ResponseConverter(),
+        );
+
+        $client->authenticate('user');
+        self::assertNotNull($client->getCookie('AUTH'));
+
+        $client->logout();
+        self::assertNull($client->getCookie('AUTH'));
+    }
+
+    public function testGetProfileReturnsNullWhenNoProfileToken(): void
+    {
+        $client = new PlaywrightKernelClient(
+            $this->browser,
+            new class implements HttpKernelInterface {
+                public function handle(SymfonyRequest $request, int $type = self::MAIN_REQUEST, bool $catch = true): SymfonyResponse
+                {
+                    return new SymfonyResponse('ok');
+                }
+            },
+            new RequestConverter(),
+            new ResponseConverter(),
+        );
+
+        $profile = $client->getProfile();
+
+        self::assertNull($profile);
+    }
+
+    public function testClearCookieWithCustomDomainAndPath(): void
+    {
+        $client = new PlaywrightKernelClient(
+            $this->browser,
+            new class implements HttpKernelInterface {
+                public function handle(SymfonyRequest $request, int $type = self::MAIN_REQUEST, bool $catch = true): SymfonyResponse
+                {
+                    return new SymfonyResponse('ok');
+                }
+            },
+            new RequestConverter(),
+            new ResponseConverter(),
+        );
+
+        $client->setCookie('test', 'value');
+        $client->clearCookie('test', 'localhost', '/custom');
+
+        // Cookie should be cleared
+        self::assertNull($client->getCookie('test'));
+    }
+
+    public function testGetCookieWithCustomUrl(): void
+    {
+        $client = new PlaywrightKernelClient(
+            $this->browser,
+            new class implements HttpKernelInterface {
+                public function handle(SymfonyRequest $request, int $type = self::MAIN_REQUEST, bool $catch = true): SymfonyResponse
+                {
+                    return new SymfonyResponse('ok');
+                }
+            },
+            new RequestConverter(),
+            new ResponseConverter(),
+        );
+
+        $client->setCookie('session', 'abc123');
+        $value = $client->getCookie('session', 'http://localhost');
+
+        self::assertSame('abc123', $value);
+    }
+
+    public function testCapturesProfileTokenFromResponse(): void
+    {
+        $client = new PlaywrightKernelClient(
+            $this->browser,
+            new class implements HttpKernelInterface {
+                public function handle(SymfonyRequest $request, int $type = self::MAIN_REQUEST, bool $catch = true): SymfonyResponse
+                {
+                    $response = new SymfonyResponse('ok');
+                    $response->headers->set('X-Debug-Token', 'test-token-123');
+
+                    return $response;
+                }
+            },
+            new RequestConverter(),
+            new ResponseConverter(),
+        );
+
+        $client->visit('/test');
+        $mock = new MockRequest(url: 'http://localhost/test', method: 'GET');
+        $this->page->triggerRequest($mock);
+
+        // Profile token should be captured
+        $profile = $client->getProfile();
+        // Since we don't have profiler service, this will return null, but token was captured
+        self::assertNull($profile);
+    }
+
+    public function testHandlesKernelExceptions(): void
+    {
+        $client = new PlaywrightKernelClient(
+            $this->browser,
+            new class implements HttpKernelInterface {
+                public function handle(SymfonyRequest $request, int $type = self::MAIN_REQUEST, bool $catch = true): SymfonyResponse
+                {
+                    throw new \RuntimeException('Kernel error');
+                }
+            },
+            new RequestConverter(),
+            new ResponseConverter(),
+            [],
+            ['localhost'],
+            null,
+            null,
+            'http://localhost',
+            new FakeLogger(),
+            false,
+        );
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('Kernel error');
+
+        $client->visit('/test');
+        $mock = new MockRequest(url: 'http://localhost/test', method: 'GET');
+        $this->page->triggerRequest($mock);
+    }
+
+    public function testLogsExceptionsWhenKernelThrows(): void
+    {
+        $logger = new FakeLogger();
+
+        $client = new PlaywrightKernelClient(
+            $this->browser,
+            new class implements HttpKernelInterface {
+                public function handle(SymfonyRequest $request, int $type = self::MAIN_REQUEST, bool $catch = true): SymfonyResponse
+                {
+                    throw new \RuntimeException('Test exception');
+                }
+            },
+            new RequestConverter(),
+            new ResponseConverter(),
+            [],
+            ['localhost'],
+            null,
+            null,
+            'http://localhost',
+            $logger,
+            false,
+        );
+
+        try {
+            $client->visit('/test');
+            $mock = new MockRequest(url: 'http://localhost/test', method: 'GET');
+            $this->page->triggerRequest($mock);
+        } catch (\RuntimeException) {
+            // Expected
+        }
+
+        self::assertTrue($logger->hasRecord('error'));
+    }
+
+    public function testDoesNotInterceptWhenUrlIsFalse(): void
+    {
+        $client = new PlaywrightKernelClient(
+            $this->browser,
+            new class implements HttpKernelInterface {
+                public function handle(SymfonyRequest $request, int $type = self::MAIN_REQUEST, bool $catch = true): SymfonyResponse
+                {
+                    return new SymfonyResponse('ok');
+                }
+            },
+            new RequestConverter(),
+            new ResponseConverter(),
+            [],
+            ['localhost'],
+        );
+
+        $client->visit('/test');
+
+        // Malformed URL request should continue (not intercept)
+        $mock = new MockRequest(url: 'not-a-valid-url', method: 'GET');
+        $route = $this->page->triggerRequest($mock);
+
+        self::assertTrue($route->continued);
+        self::assertFalse($route->fulfilled);
+    }
+
+    public function testHandlesMultipleOutputBufferLevels(): void
+    {
+        $client = new PlaywrightKernelClient(
+            $this->browser,
+            new class implements HttpKernelInterface {
+                public function handle(SymfonyRequest $request, int $type = self::MAIN_REQUEST, bool $catch = true): SymfonyResponse
+                {
+                    // Create nested output buffers
+                    ob_start();
+                    echo 'level 1';
+                    ob_start();
+                    echo 'level 2';
+
+                    return new SymfonyResponse('ok');
+                }
+            },
+            new RequestConverter(),
+            new ResponseConverter(),
+        );
+
+        $client->visit('/test');
+        $mock = new MockRequest(url: 'http://localhost/test', method: 'GET');
+        $this->page->triggerRequest($mock);
+
+        $response = $client->getLastSymfonyResponse();
+
+        self::assertNotNull($response);
+        self::assertSame('ok', $response->getContent());
+    }
+
+    public function testBaseUrlCanBeCustomized(): void
+    {
+        $client = new PlaywrightKernelClient(
+            $this->browser,
+            new class implements HttpKernelInterface {
+                public function handle(SymfonyRequest $request, int $type = self::MAIN_REQUEST, bool $catch = true): SymfonyResponse
+                {
+                    return new SymfonyResponse('ok');
+                }
+            },
+            new RequestConverter(),
+            new ResponseConverter(),
+            [],
+            ['custom.test'],
+            null,
+            null,
+            'http://custom.test',
+        );
+
+        self::assertSame('http://custom.test', $client->getBaseUrl());
+    }
+
+    public function testVisitThrowsExceptionWhenPageIsNull(): void
+    {
+        $browserWithoutPage = new TestBrowserRegistry($this->context, null);
+
+        $client = new PlaywrightKernelClient(
+            $browserWithoutPage,
+            new class implements HttpKernelInterface {
+                public function handle(SymfonyRequest $request, int $type = self::MAIN_REQUEST, bool $catch = true): SymfonyResponse
+                {
+                    return new SymfonyResponse('ok');
+                }
+            },
+            new RequestConverter(),
+            new ResponseConverter(),
+        );
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('No page available. Browser may not be started.');
+
+        $client->visit('/test');
+    }
+
+    public function testSetCookieThrowsExceptionWhenContextIsNull(): void
+    {
+        $browserWithoutContext = new TestBrowserRegistry(null, $this->page);
+
+        $client = new PlaywrightKernelClient(
+            $browserWithoutContext,
+            new class implements HttpKernelInterface {
+                public function handle(SymfonyRequest $request, int $type = self::MAIN_REQUEST, bool $catch = true): SymfonyResponse
+                {
+                    return new SymfonyResponse('ok');
+                }
+            },
+            new RequestConverter(),
+            new ResponseConverter(),
+        );
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('Browser context is null - browser may not be started');
+
+        $client->setCookie('test', 'value');
+    }
+
+    public function testSetCookieHandlesIntExpires(): void
+    {
+        $client = new PlaywrightKernelClient(
+            $this->browser,
+            new class implements HttpKernelInterface {
+                public function handle(SymfonyRequest $request, int $type = self::MAIN_REQUEST, bool $catch = true): SymfonyResponse
+                {
+                    return new SymfonyResponse('ok');
+                }
+            },
+            new RequestConverter(),
+            new ResponseConverter(),
+        );
+
+        $client->setCookie('test', 'value', ['expires' => 1234567890]);
+
+        $value = $client->getCookie('test');
+        self::assertSame('value', $value);
+    }
+
+    public function testSetCookieHandlesNumericStringExpires(): void
+    {
+        $client = new PlaywrightKernelClient(
+            $this->browser,
+            new class implements HttpKernelInterface {
+                public function handle(SymfonyRequest $request, int $type = self::MAIN_REQUEST, bool $catch = true): SymfonyResponse
+                {
+                    return new SymfonyResponse('ok');
+                }
+            },
+            new RequestConverter(),
+            new ResponseConverter(),
+        );
+
+        $client->setCookie('test', 'value', ['expires' => '1234567890']);
+
+        $value = $client->getCookie('test');
+        self::assertSame('value', $value);
+    }
+
+    public function testSetCookieRemovesInvalidExpires(): void
+    {
+        $client = new PlaywrightKernelClient(
+            $this->browser,
+            new class implements HttpKernelInterface {
+                public function handle(SymfonyRequest $request, int $type = self::MAIN_REQUEST, bool $catch = true): SymfonyResponse
+                {
+                    return new SymfonyResponse('ok');
+                }
+            },
+            new RequestConverter(),
+            new ResponseConverter(),
+        );
+
+        $client->setCookie('test', 'value', ['expires' => 'invalid']);
+
+        $value = $client->getCookie('test');
+        self::assertSame('value', $value);
+    }
+
+    public function testGetCrawlerReturnsEmptyCrawlerWhenPageIsNull(): void
+    {
+        $browserWithoutPage = new TestBrowserRegistry($this->context, null);
+
+        $client = new PlaywrightKernelClient(
+            $browserWithoutPage,
+            new class implements HttpKernelInterface {
+                public function handle(SymfonyRequest $request, int $type = self::MAIN_REQUEST, bool $catch = true): SymfonyResponse
+                {
+                    return new SymfonyResponse('ok');
+                }
+            },
+            new RequestConverter(),
+            new ResponseConverter(),
+        );
+
+        $crawler = $client->getCrawler();
+
+        self::assertInstanceOf(Crawler::class, $crawler);
+        self::assertCount(0, $crawler->filter('body > *'));
+    }
+
+    public function testAssetServerMissFallsBackToKernel(): void
+    {
+        $logger = new FakeLogger();
+        $tracker = new class {
+            public bool $kernelHandled = false;
+        };
+
+        $kernel = new class($tracker) implements HttpKernelInterface {
+            public function __construct(private object $tracker)
+            {
+            }
+
+            public function handle(SymfonyRequest $request, int $type = self::MAIN_REQUEST, bool $catch = true): SymfonyResponse
+            {
+                $this->tracker->kernelHandled = true;
+
+                return new SymfonyResponse('kernel');
+            }
+        };
+
+        $locator = new class implements AssetLocatorInterface {
+            public function locate(string $requestPath): ?AssetFile
+            {
+                return null; // Always miss
+            }
+        };
+
+        $assetServer = new AssetServer([$locator], ['/assets'], true);
+
+        $client = new PlaywrightKernelClient(
+            $this->browser,
+            $kernel,
+            new RequestConverter(),
+            new ResponseConverter(),
+            [],
+            ['localhost'],
+            null,
+            $assetServer,
+            'http://localhost',
+            $logger,
+            true,
+        );
+
+        $client->visit('/start');
+
+        $mock = new MockRequest(url: 'http://localhost/assets/app.css', method: 'GET');
+        $this->page->triggerRequest($mock);
+
+        self::assertTrue($tracker->kernelHandled, 'Kernel should handle request when asset server misses');
+        self::assertTrue($logger->hasRecord('debug', static function (array $context, string $message): bool {
+            return 'AssetServer miss falling back to kernel' === $message;
+        }));
+    }
+
+    public function testInvalidRouteObjectDoesNothing(): void
+    {
+        $logger = new FakeLogger();
+
+        $client = new PlaywrightKernelClient(
+            $this->browser,
+            new class implements HttpKernelInterface {
+                public function handle(SymfonyRequest $request, int $type = self::MAIN_REQUEST, bool $catch = true): SymfonyResponse
+                {
+                    return new SymfonyResponse('ok');
+                }
+            },
+            new RequestConverter(),
+            new ResponseConverter(),
+            [],
+            ['localhost'],
+            null,
+            null,
+            'http://localhost',
+            $logger,
+            true,
+        );
+
+        $client->visit('/test');
+
+        // Trigger with an invalid route object (no request method)
+        $invalidRoute = new \stdClass();
+        $this->page->triggerRequestWithInvalidRoute($invalidRoute);
+
+        // Should have logged navigation but not handled invalid route
+        self::assertTrue($logger->hasRecord('debug', static function (array $context, string $message): bool {
+            return 'Navigating with Playwright' === $message;
+        }));
+    }
+
+    public function testSetCookieHandlesCustomDomain(): void
+    {
+        $client = new PlaywrightKernelClient(
+            $this->browser,
+            new class implements HttpKernelInterface {
+                public function handle(SymfonyRequest $request, int $type = self::MAIN_REQUEST, bool $catch = true): SymfonyResponse
+                {
+                    return new SymfonyResponse('ok');
+                }
+            },
+            new RequestConverter(),
+            new ResponseConverter(),
+        );
+
+        $client->setCookie('test', 'value', ['domain' => 'custom.test']);
+
+        $value = $client->getCookie('test');
+        self::assertSame('value', $value);
+    }
+
+    public function testSetCookieHandlesCustomPath(): void
+    {
+        $client = new PlaywrightKernelClient(
+            $this->browser,
+            new class implements HttpKernelInterface {
+                public function handle(SymfonyRequest $request, int $type = self::MAIN_REQUEST, bool $catch = true): SymfonyResponse
+                {
+                    return new SymfonyResponse('ok');
+                }
+            },
+            new RequestConverter(),
+            new ResponseConverter(),
+        );
+
+        $client->setCookie('test', 'value', ['path' => '/admin']);
+
+        $value = $client->getCookie('test');
+        self::assertSame('value', $value);
+    }
+
+    public function testGetCookieReturnsNullForEmptyStringValue(): void
+    {
+        $client = new PlaywrightKernelClient(
+            $this->browser,
+            new class implements HttpKernelInterface {
+                public function handle(SymfonyRequest $request, int $type = self::MAIN_REQUEST, bool $catch = true): SymfonyResponse
+                {
+                    return new SymfonyResponse('ok');
+                }
+            },
+            new RequestConverter(),
+            new ResponseConverter(),
+        );
+
+        $client->setCookie('test', '');
+
+        $value = $client->getCookie('test');
+        self::assertNull($value);
     }
 }

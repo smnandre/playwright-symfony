@@ -1,6 +1,7 @@
 # Playwright Logging Guide
 
-The bundle can emit structured logs for every intercepted Playwright request. Logging is disabled by default to keep CI output quiet.
+The bundle can emit structured logs for every intercepted Playwright request. Logging is disabled by default to keep CI
+output quiet.
 
 ## Enabling Logs
 
@@ -8,7 +9,7 @@ The bundle can emit structured logs for every intercepted Playwright request. Lo
 
 ```yaml
 playwright:
-    debug_logging: true
+  debug_logging: true
 ```
 
 2. **Environment override**: `PLAYWRIGHT_VERBOSE=1 vendor/bin/phpunit …`
@@ -19,8 +20,8 @@ The environment variable always wins over configuration.
 
 - Logs are sent to the `monolog.logger.playwright` channel when available, otherwise the default `logger` service.
 - When debug logging is enabled:
-  - `info`: emitted after each intercepted request (includes method, URI, status, duration).
-  - `debug`: emitted for routing decisions (asset hits/misses, continued external requests) and navigation calls.
+    - `info`: emitted after each intercepted request (includes method, URI, status, duration).
+    - `debug`: emitted for routing decisions (asset hits/misses, continued external requests) and navigation calls.
 - Errors (e.g. kernel exceptions) are logged regardless of the debug flag.
 
 ### Suggested Monolog config
@@ -28,13 +29,13 @@ The environment variable always wins over configuration.
 ```yaml
 # config/packages/test/monolog.yaml
 monolog:
-    channels: ['playwright']
-    handlers:
-        playwright:
-            type: stream
-            path: '%kernel.logs_dir%/playwright.log'
-            channels: ['playwright']
-            level: debug
+  channels: ['playwright']
+  handlers:
+    playwright:
+      type: stream
+      path: '%kernel.logs_dir%/playwright.log'
+      channels: ['playwright']
+      level: debug
 ```
 
 ## Sample Output

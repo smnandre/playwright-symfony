@@ -1,6 +1,7 @@
 # Helper & Assertion Reference
 
-This bundle provides a comprehensive set of test helpers to make E2E testing straightforward and productive. All helpers are available on `Playwright\Symfony\Test\PlaywrightTestCase`.
+This bundle provides a comprehensive set of test helpers to make E2E testing straightforward and productive. All helpers
+are available on `Playwright\Symfony\Test\PlaywrightTestCase`.
 
 ## Navigation Helpers
 
@@ -9,11 +10,13 @@ This bundle provides a comprehensive set of test helpers to make E2E testing str
 Navigate to a path and return the Playwright Page instance.
 
 **Parameters:**
+
 - `$path` - Path relative to the configured `base_url`
 
 **Returns:** `PageInterface` - The Playwright Page object
 
 **Example:**
+
 ```php
 public function testNavigate(): void
 {
@@ -29,6 +32,7 @@ Get the current Playwright Page instance.
 **Returns:** `PageInterface` - The active Page object
 
 **Example:**
+
 ```php
 public function testGetPage(): void
 {
@@ -44,6 +48,7 @@ public function testGetPage(): void
 Convenience property for accessing the Page without calling `getPage()`.
 
 **Example:**
+
 ```php
 public function testMagicProperty(): void
 {
@@ -61,6 +66,7 @@ These assertions are provided by `PlaywrightTestAssertionsTrait` which is includ
 Assert that the page HTML contains the specified text.
 
 **Example:**
+
 ```php
 public function testContent(): void
 {
@@ -74,6 +80,7 @@ public function testContent(): void
 Assert that the page HTML does not contain the specified text.
 
 **Example:**
+
 ```php
 public function testNoErrors(): void
 {
@@ -87,6 +94,7 @@ public function testNoErrors(): void
 Assert that a CSS selector exists on the page.
 
 **Example:**
+
 ```php
 public function testElement(): void
 {
@@ -101,6 +109,7 @@ public function testElement(): void
 Assert that a CSS selector does not exist on the page.
 
 **Example:**
+
 ```php
 public function testHidden(): void
 {
@@ -114,6 +123,7 @@ public function testHidden(): void
 Wait for a selector to appear on the page.
 
 **Example:**
+
 ```php
 public function testAsync(): void
 {
@@ -133,6 +143,7 @@ These are convenience methods that forward to the Playwright Page API:
 Click an element matching the selector.
 
 **Example:**
+
 ```php
 public function testClick(): void
 {
@@ -146,6 +157,7 @@ public function testClick(): void
 Fill an input field with a value.
 
 **Example:**
+
 ```php
 public function testFill(): void
 {
@@ -160,6 +172,7 @@ public function testFill(): void
 Select an option from a dropdown.
 
 **Example:**
+
 ```php
 public function testSelect(): void
 {
@@ -173,6 +186,7 @@ public function testSelect(): void
 Check a checkbox.
 
 **Example:**
+
 ```php
 public function testCheck(): void
 {
@@ -186,6 +200,7 @@ public function testCheck(): void
 Uncheck a checkbox.
 
 **Example:**
+
 ```php
 public function testUncheck(): void
 {
@@ -199,6 +214,7 @@ public function testUncheck(): void
 Take a screenshot and save it to the specified path.
 
 **Example:**
+
 ```php
 public function testScreenshot(): void
 {
@@ -214,11 +230,13 @@ public function testScreenshot(): void
 Set a cookie in the browser context.
 
 **Parameters:**
+
 - `$name` - Cookie name
 - `$value` - Cookie value
 - `$options` - Optional cookie attributes (path, domain, expires, etc.)
 
 **Example:**
+
 ```php
 public function testSetCookie(): void
 {
@@ -237,12 +255,14 @@ public function testSetCookie(): void
 Get a cookie value from the browser context.
 
 **Parameters:**
+
 - `$name` - Cookie name
 - `$url` - Optional URL to scope the cookie (defaults to base_url)
 
 **Returns:** `string|null` - Cookie value or null if not found
 
 **Example:**
+
 ```php
 public function testGetCookie(): void
 {
@@ -259,6 +279,7 @@ public function testGetCookie(): void
 Remove a specific cookie.
 
 **Example:**
+
 ```php
 public function testClearCookie(): void
 {
@@ -275,6 +296,7 @@ public function testClearCookie(): void
 Remove all cookies from the browser context.
 
 **Example:**
+
 ```php
 public function testClearAllCookies(): void
 {
@@ -290,13 +312,16 @@ public function testClearAllCookies(): void
 
 ### `authenticate(string $identifier = 'user', array $context = []): void`
 
-Convenience helper that sets an `AUTH` cookie with user information. This is intended as a starting point - you'll likely override this or use `beforeRequest()` for your authentication scheme.
+Convenience helper that sets an `AUTH` cookie with user information. This is intended as a starting point - you'll
+likely override this or use `beforeRequest()` for your authentication scheme.
 
 **Parameters:**
+
 - `$identifier` - User identifier (email, username, ID, etc.)
 - `$context` - Additional context (roles, permissions, etc.)
 
 **Example:**
+
 ```php
 public function testAuthenticatedAccess(): void
 {
@@ -310,13 +335,15 @@ public function testAuthenticatedAccess(): void
 }
 ```
 
-**Note:** The `authenticate()` method stores data in an `AUTH` cookie as JSON. You'll need to handle this cookie in your application's security layer or override this method for your authentication mechanism.
+**Note:** The `authenticate()` method stores data in an `AUTH` cookie as JSON. You'll need to handle this cookie in your
+application's security layer or override this method for your authentication mechanism.
 
 ### `logout(): void`
 
 Remove the authentication cookie.
 
 **Example:**
+
 ```php
 public function testLogout(): void
 {
@@ -386,6 +413,7 @@ Get the last Symfony Request that was intercepted and handled by the kernel.
 **Returns:** `SymfonyRequest|null` - The last request or null if no request yet
 
 **Example:**
+
 ```php
 public function testRequestHeaders(): void
 {
@@ -404,6 +432,7 @@ Get the last Symfony Response returned by the kernel.
 **Returns:** `SymfonyResponse|null` - The last response or null if no response yet
 
 **Example:**
+
 ```php
 public function testResponseHeaders(): void
 {
@@ -425,6 +454,7 @@ Get the configured base URL for the application.
 **Returns:** `string` - The base URL (e.g., `http://localhost`)
 
 **Example:**
+
 ```php
 public function testBaseUrl(): void
 {
@@ -442,12 +472,14 @@ Override this method to customize requests before they reach the kernel.
 **Called:** Right before the kernel handles each intercepted request
 
 **Use Cases:**
+
 - Modify request headers
 - Set session data
 - Add authentication tokens
 - Change locale
 
 **Example:**
+
 ```php
 protected function beforeRequest(SymfonyRequest $request): void
 {
@@ -470,12 +502,14 @@ Override this method to inspect or modify responses after the kernel returns the
 **Called:** Immediately after the kernel responds to each intercepted request
 
 **Use Cases:**
+
 - Assert on response headers
 - Collect performance metrics
 - Log response data
 - Verify security headers
 
 **Example:**
+
 ```php
 protected function afterResponse(SymfonyResponse $response): void
 {
@@ -497,12 +531,14 @@ Override this method to centralize test data loading.
 **Called:** When you explicitly call it from your tests
 
 **Use Cases:**
+
 - Load Doctrine fixtures
 - Seed database data
 - Create test files
 - Set up test environment
 
 **Example:**
+
 ```php
 protected function loadFixtures(array $fixtures): void
 {
@@ -546,7 +582,8 @@ public function testWithFixtures(): void
 
 ### Lifecycle Considerations
 
-**Important:** If you override `setUp()` or `tearDown()`, always call the parent methods. Note that the browser process is managed at the class level and stopped in `tearDownAfterClass()`.
+**Important:** If you override `setUp()` or `tearDown()`, always call the parent methods. Note that the browser process
+is managed at the class level and stopped in `tearDownAfterClass()`.
 
 ```php
 protected function setUp(): void

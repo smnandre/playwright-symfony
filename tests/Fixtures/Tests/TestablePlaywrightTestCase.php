@@ -273,4 +273,25 @@ class TestablePlaywrightTestCase extends PlaywrightTestCase
 
         return $closure();
     }
+
+    public function publicVisit(string $path): mixed
+    {
+        return $this->visit($path);
+    }
+
+    public function publicGetPage(): mixed
+    {
+        $closure = \Closure::bind(
+            static fn (): mixed => $this->getPage(),
+            $this,
+            PlaywrightTestCase::class
+        );
+
+        return $closure();
+    }
+
+    public function publicGetBaseUrl(): string
+    {
+        return $this->getBaseUrl();
+    }
 }

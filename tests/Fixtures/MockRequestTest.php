@@ -12,12 +12,11 @@ declare(strict_types=1);
  * file that was distributed with this source code.
  */
 
-namespace Playwright\Symfony\Tests\Http;
+namespace Playwright\Symfony\Tests\Fixtures;
 
 use PHPUnit\Framework\Attributes\CoversNothing;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use Playwright\Symfony\Tests\Fixtures\MockRequest;
 
 #[CoversNothing]
 class MockRequestTest extends TestCase

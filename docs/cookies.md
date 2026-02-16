@@ -2,7 +2,8 @@
 
 ## Overview
 
-This document explains how cookies work in the Playwright Symfony bundle, specifically how cookies are synchronized between the browser context and Symfony's kernel.
+This document explains how cookies work in the Playwright Symfony bundle, specifically how cookies are synchronized
+between the browser context and Symfony's kernel.
 
 ## Architecture
 
@@ -24,18 +25,19 @@ Browser Context (Playwright)
 
 ## Key Components
 
-### 1. PlaywrightBrowser (`src/Browser/PlaywrightBrowser.php`)
+### 1. BrowserRegistry (`src/Client/BrowserRegistry.php`)
 
 Manages the browser instance and context.
 
 **Key Methods:**
+
 - `getContext()` - Returns browser context (auto-starts browser if needed)
 - `getPage()` - Returns current page (auto-starts browser if needed)
 - `start()` - Explicitly starts the browser
 
 **Important:** `getContext()` now calls `ensureStarted()` to prevent null context issues.
 
-### 2. PlaywrightClient (`src/Client/PlaywrightClient.php`)
+### 2. PlaywrightKernelClient (`src/Client/PlaywrightKernelClient.php`)
 
 Provides cookie helper methods.
 
@@ -46,17 +48,19 @@ Provides cookie helper methods.
 Sets a cookie in the browser context.
 
 **Parameters:**
+
 - `$name` - Cookie name
-- `$value` - Cookie value  
+- `$value` - Cookie value
 - `$options` - Optional array with:
-  - `domain` - Cookie domain (auto-extracted from baseUrl if not provided)
-  - `path` - Cookie path (default: `/`)
-  - `expires` - Expiration timestamp (int)
-  - `httpOnly` - HTTP only flag (bool)
-  - `secure` - Secure flag (bool)
-  - `sameSite` - SameSite attribute ('Lax', 'None', 'Strict')
+    - `domain` - Cookie domain (auto-extracted from baseUrl if not provided)
+    - `path` - Cookie path (default: `/`)
+    - `expires` - Expiration timestamp (int)
+    - `httpOnly` - HTTP only flag (bool)
+    - `secure` - Secure flag (bool)
+    - `sameSite` - SameSite attribute ('Lax', 'None', 'Strict')
 
 **Implementation:**
+
 ```php
 public function setCookie(string $name, string $value, array $options = []): void
 {
@@ -86,6 +90,7 @@ Retrieves a cookie value from the browser context.
 Removes a specific cookie from the browser context by setting its expiration to the past.
 
 **Implementation:**
+
 ```php
 public function clearCookie(string $name, ?string $domain = null, string $path = '/'): void
 {
@@ -108,6 +113,7 @@ Removes all cookies from the browser context.
 Converts Playwright requests to Symfony requests, including cookie parsing.
 
 **Cookie Parsing:**
+
 ```php
 // Parse cookies from Cookie header
 if (isset($lower['cookie'])) {
@@ -134,6 +140,7 @@ private function parseCookieHeader(string $cookieHeader): array
 ### ⚠️ Use 'domain' Parameter, Not 'url'
 
 **WRONG:**
+
 ```php
 $context->addCookies([
     [
@@ -145,6 +152,7 @@ $context->addCookies([
 ```
 
 **CORRECT:**
+
 ```php
 $context->addCookies([
     [
@@ -155,7 +163,8 @@ $context->addCookies([
 ]);
 ```
 
-**Why:** While Playwright's documentation mentions both parameters, in practice only `domain` reliably works for cookie persistence.
+**Why:** While Playwright's documentation mentions both parameters, in practice only `domain` reliably works for cookie
+persistence.
 
 ### Domain Extraction
 
@@ -171,7 +180,7 @@ $domain = parse_url('http://localhost:8080/path', PHP_URL_HOST);
 Both `getContext()` and `getPage()` auto-start the browser:
 
 ```php
-$browser = PlaywrightBrowser::fromEnvironment();
+$browser = BrowserRegistry::fromEnvironment();
 $context = $browser->getContext(); // Browser starts automatically
 ```
 
@@ -222,34 +231,37 @@ self::assertSame('1', $this->getCookie('notice'));
 ### Cookies Not Appearing in Request
 
 **Symptoms:**
+
 - `$request->cookies->all()` returns empty array
 - Controller doesn't see expected cookies
 
 **Causes & Solutions:**
 
 1. **Browser not started**
-   - Solution: Call `getContext()` or `getPage()` (auto-starts)
-   
+    - Solution: Call `getContext()` or `getPage()` (auto-starts)
+
 2. **Using 'url' instead of 'domain'**
-   - Solution: Use `domain` parameter in cookie array
+    - Solution: Use `domain` parameter in cookie array
 
 3. **Domain mismatch**
-   - Cookie domain: `localhost`
-   - Request host: `127.0.0.1`
-   - Solution: Ensure domain matches or use wildcard
+    - Cookie domain: `localhost`
+    - Request host: `127.0.0.1`
+    - Solution: Ensure domain matches or use wildcard
 
 4. **Path mismatch**
-   - Cookie path: `/admin`
-   - Request path: `/`
-   - Solution: Set cookie path to `/` or match request path
+    - Cookie path: `/admin`
+    - Request path: `/`
+    - Solution: Set cookie path to `/` or match request path
 
 ### Cookies Persisting Between Tests
 
 **Symptoms:**
+
 - Test B sees cookies from Test A
 - Unexpected authentication state
 
 **Solution:**
+
 ```php
 protected function tearDown(): void
 {
@@ -261,12 +273,14 @@ protected function tearDown(): void
 ### Cookie Not Sent with Request
 
 **Check:**
+
 1. Cookie domain matches request host
 2. Cookie path matches request path
 3. Cookie isn't expired
 4. Secure flag matches protocol (HTTPS/HTTP)
 
 **Debug:**
+
 ```php
 // Check what cookies browser has
 $cookies = $this->browser->getContext()->cookies();
@@ -369,5 +383,6 @@ $context->clearCookies();
 
 - [Cookie Fix Investigation](troubleshooting/cookie-fix-investigation.md) - Detailed debugging process
 - [Testing Guide](testing.md) - General testing documentation
-- [Playwright Cookie API](https://playwright.dev/docs/api/class-browsercontext#browser-context-add-cookies) - Upstream documentation
+- [Playwright Cookie API](https://playwright.dev/docs/api/class-browsercontext#browser-context-add-cookies) - Upstream
+  documentation
 

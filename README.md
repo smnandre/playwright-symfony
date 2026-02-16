@@ -156,7 +156,7 @@ PLAYWRIGHT_E2E=1 PLAYWRIGHT_HEADLESS=false vendor/bin/phpunit tests/E2E
 
 ## Asset Dev Server
 
-Static files (including AssetMapper output) are served by the in-process `AssetServer`, so requests under `/assets`, `/build`, and other configured prefixes never touch the kernel. Customize prefixes, additional `public_roots`, and cache behavior via `playwright.assets`—see [`docs/ASSET_DEV_SERVER.md`](docs/ASSET_DEV_SERVER.md) for a full walkthrough and troubleshooting tips.
+Static files (including AssetMapper output) are served by the in-process `AssetServer`, so requests under `/assets`, `/build`, and other configured prefixes never touch the kernel. Customize prefixes, additional `public_roots`, and cache behavior via `playwright.assets`—see [`docs/ASSET_DEV_SERVER.md`](docs/asset-dev-server.md) for a full walkthrough and troubleshooting tips.
 
 ## Common Scenarios
 

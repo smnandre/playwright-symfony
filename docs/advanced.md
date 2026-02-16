@@ -27,7 +27,8 @@ $this->assertResponseStatusCode(403);
 
 ## Cookie Management
 
-You can manage cookies directly via the client. These cookies will be synchronized with both the browser and the Symfony Kernel.
+You can manage cookies directly via the client. These cookies will be synchronized with both the browser and the Symfony
+Kernel.
 
 ```php
 // Set a cookie
@@ -61,13 +62,14 @@ You can define multiple browser configurations in `playwright.yaml` and autowire
 ```yaml
 # config/packages/test/playwright.yaml
 playwright:
-    browsers:
-        firefox_debug:
-            type: 'firefox'
-            headless: false
+  browsers:
+    firefox_debug:
+      type: 'firefox'
+      headless: false
 ```
 
 In your test:
+
 ```php
 public function testWithFirefox(\Playwright\Browser\BrowserContextInterface $firefoxDebug): void
 {

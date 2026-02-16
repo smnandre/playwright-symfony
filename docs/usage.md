@@ -5,6 +5,7 @@
 To use Playwright in your tests, extend `Playwright\Symfony\Test\PlaywrightTestCase`.
 
 This class provides:
+
 - Automatic browser lifecycle management.
 - An initialized `PlaywrightClient`.
 - Magic access to the Playwright `Page` object.
@@ -21,7 +22,8 @@ By default, this is prefixed with the `base_url` configuration.
 
 ## Interacting with the Page
 
-The `$this->page` magic property gives you direct access to the [Playwright Page API](https://playwright.dev/docs/api/class-page).
+The `$this->page` magic property gives you direct access to
+the [Playwright Page API](https://playwright.dev/docs/api/class-page).
 
 ```php
 // Fill an input
@@ -39,18 +41,22 @@ $this->page->waitForSelector('.success-message');
 `PlaywrightTestCase` includes several helper assertions to make your tests cleaner.
 
 ### Content Assertions
+
 - `$this->assertPageContains(string $text)`
 - `$this->assertPageNotContains(string $text)`
 - `$this->assertSelectorTextContains(string $selector, string $text)`
 
 ### Visibility Assertions
+
 - `$this->assertSelectorVisible(string $selector)`
 - `$this->assertSelectorHidden(string $selector)`
 - `$this->assertSelectorExists(string $selector)`
 - `$this->assertSelectorNotExists(string $selector)`
 
 ### HTTP Assertions
+
 These check the response returned by the Symfony Kernel during the last intercepted request.
+
 - `$this->assertResponseIsSuccessful()`
 - `$this->assertResponseStatusCode(int $code)`
 - `$this->assertResponseIsRedirect()`
@@ -64,6 +70,7 @@ $this->page->screenshot(['path' => 'var/screenshots/test.png']);
 ```
 
 Or use the helper:
+
 ```php
 $this->screenshot('var/screenshots/test.png');
 ```

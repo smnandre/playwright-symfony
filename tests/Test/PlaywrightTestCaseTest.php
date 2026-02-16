@@ -352,4 +352,88 @@ class PlaywrightTestCaseTest extends TestCase
 
         $this->assertTrue($this->browser->stopped, 'Browser should be stopped during tearDownAfterClass');
     }
+
+    public function testMagicSetThrowsException(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage("Property 'page' is read-only or does not exist");
+
+        /* @phpstan-ignore-next-line - setting read-only property intentionally */
+        $this->lifecycleTestCase->page = 'value';
+    }
+
+    public function testMagicIssetReturnsTrueForPage(): void
+    {
+        $this->assertTrue(isset($this->lifecycleTestCase->page));
+    }
+
+    public function testMagicIssetReturnsFalseForOtherProperties(): void
+    {
+        $this->assertFalse(isset($this->lifecycleTestCase->unknown));
+    }
+
+    public function testGetBaseUrlDelegatesToClient(): void
+    {
+        // getBaseUrl() delegates to client
+        $result = $this->lifecycleTestCase->publicGetBaseUrl();
+
+        // FakeClient has default baseUrl = 'http://localhost'
+        $this->assertSame('http://localhost', $result);
+    }
+
+    public function testParsesCookieHeader(): void
+    {
+        $playwrightRequest = new MockRequest(
+            url: 'http://localhost/test',
+            method: 'GET',
+            headers: ['cookie' => 'session=abc123; user=john'],
+            postData: null,
+        );
+
+        $request = $this->testCase->publicConvertToSymfonyRequest($playwrightRequest);
+
+        $this->assertSame('abc123', $request->cookies->get('session'));
+        $this->assertSame('john', $request->cookies->get('user'));
+    }
+
+    public function testShouldInterceptRequestReturnsFalseForUrlWithoutHost(): void
+    {
+        // parse_url may return array without 'host' key
+        $this->assertFalse($this->testCase->publicShouldInterceptRequest([]));
+    }
+
+    public function testPrepareFulfillOptionsHandlesRedirectResponse(): void
+    {
+        $response = new Response('', 302, [
+            'location' => 'https://example.com/redirected',
+        ]);
+
+        $opts = $this->testCase->publicPrepareFulfillOptions($response);
+
+        $this->assertSame(302, $opts['status']);
+        $this->assertSame('https://example.com/redirected', $opts['headers']['location']);
+    }
+
+    public function testPrepareFulfillOptionsHandlesEmptyResponse(): void
+    {
+        $response = new Response('', 204);
+
+        $opts = $this->testCase->publicPrepareFulfillOptions($response);
+
+        $this->assertSame(204, $opts['status']);
+        $this->assertSame('', $opts['body']);
+    }
+
+    public function testFormatHeadersPreservesEmptyArrays(): void
+    {
+        $headers = [
+            'x-empty' => [],
+            'x-single' => ['value'],
+        ];
+
+        $formatted = $this->testCase->publicFormatHeaders($headers);
+
+        $this->assertSame('', $formatted['x-empty']);
+        $this->assertSame('value', $formatted['x-single']);
+    }
 }

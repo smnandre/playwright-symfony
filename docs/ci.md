@@ -1,10 +1,12 @@
 # Continuous Integration
 
-Playwright Symfony is designed to run efficiently in CI environments. For GitHub Actions, we recommend using our official action to set up the environment.
+Playwright Symfony is designed to run efficiently in CI environments. For GitHub Actions, we recommend using our
+official action to set up the environment.
 
 ## GitHub Actions
 
-The easiest way to set up Playwright in your GitHub workflows is by using the `playwright-php/setup-playwright-php` action.
+The easiest way to set up Playwright in your GitHub workflows is by using the `playwright-php/setup-playwright-php`
+action.
 
 ```yaml
 # .github/workflows/ci.yml
@@ -62,4 +64,6 @@ test:
 
 ## Performance Tip: Parallelization
 
-If you run tests in parallel, ensure your `PLAYWRIGHT_BASE_URL` or database configuration accounts for concurrent access. Since Playwright Symfony reuses the browser process within a single class, standard PHPUnit parallelization (using `brianium/paratest`) works out of the box.
+If you run tests in parallel, ensure your `PLAYWRIGHT_BASE_URL` or database configuration accounts for concurrent
+access. Since Playwright Symfony reuses the browser process within a single class, standard PHPUnit parallelization (
+using `brianium/paratest`) works out of the box.

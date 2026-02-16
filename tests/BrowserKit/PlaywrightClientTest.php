@@ -53,4 +53,234 @@ final class PlaywrightClientTest extends TestCase
             'password' => 'pw',
         ], $context->httpCredentials);
     }
+
+    public function testGetPageReturnsPage(): void
+    {
+        $context = new FakeBrowserContext();
+        $client = PlaywrightClient::fromContext($context);
+
+        $client->request('GET', 'http://example.test/page');
+
+        $page = $client->getPage();
+
+        self::assertNotNull($page);
+        self::assertSame('http://example.test/page', $page->url());
+    }
+
+    public function testGetLastResponseReturnsNullBeforeRequest(): void
+    {
+        $context = new FakeBrowserContext();
+        $client = PlaywrightClient::fromContext($context);
+
+        $response = $client->getLastResponse();
+
+        self::assertNull($response);
+    }
+
+    public function testGetLastResponseReturnsResponseAfterRequest(): void
+    {
+        $context = new FakeBrowserContext();
+        $client = PlaywrightClient::fromContext($context);
+
+        $client->request('GET', 'http://example.test/');
+
+        $response = $client->getLastResponse();
+
+        self::assertNotNull($response);
+        self::assertSame(200, $response->getStatusCode());
+    }
+
+    public function testRequestWithFileParams(): void
+    {
+        $context = new FakeBrowserContext();
+        $client = PlaywrightClient::fromContext($context);
+
+        $client->request(
+            'POST',
+            'http://example.test/upload',
+            [],
+            [
+                'file' => [
+                    'name' => 'test.txt',
+                    'type' => 'text/plain',
+                    'tmp_name' => '/tmp/test',
+                    'error' => 0,
+                    'size' => 100,
+                ],
+            ]
+        );
+
+        $response = $client->getLastResponse();
+
+        self::assertNotNull($response);
+        self::assertSame(200, $response->getStatusCode());
+    }
+
+    public function testRequestSyncsCookiesToBrowserContext(): void
+    {
+        $context = new FakeBrowserContext();
+        $client = PlaywrightClient::fromContext($context);
+
+        // Set cookie via BrowserKit
+        $client->getCookieJar()->set(
+            new \Symfony\Component\BrowserKit\Cookie('session', 'abc123', null, '/', 'example.test')
+        );
+
+        // Request should complete without errors
+        $client->request('GET', 'http://example.test/page');
+
+        // Verify the request completed successfully
+        $response = $client->getLastResponse();
+        self::assertNotNull($response);
+        self::assertSame(200, $response->getStatusCode());
+    }
+
+    public function testRequestHandlesHttpsUrls(): void
+    {
+        $context = new FakeBrowserContext();
+        $client = PlaywrightClient::fromContext($context);
+
+        $client->request('GET', 'https://secure.example.test/secure-page');
+
+        $page = $client->getPage();
+
+        self::assertSame('https://secure.example.test/secure-page', $page?->url());
+    }
+
+    public function testRequestWithQueryParameters(): void
+    {
+        $context = new FakeBrowserContext();
+        $client = PlaywrightClient::fromContext($context);
+
+        $client->request('GET', 'http://example.test/search?q=test&page=2');
+
+        $page = $client->getPage();
+
+        self::assertStringContainsString('q=test', $page?->url() ?? '');
+        self::assertStringContainsString('page=2', $page?->url() ?? '');
+    }
+
+    public function testMultipleRequestsUpdateLastResponse(): void
+    {
+        $context = new FakeBrowserContext();
+        $client = PlaywrightClient::fromContext($context);
+
+        $client->request('GET', 'http://example.test/page1');
+        $firstResponse = $client->getLastResponse();
+
+        $client->request('GET', 'http://example.test/page2');
+        $secondResponse = $client->getLastResponse();
+
+        self::assertNotSame($firstResponse, $secondResponse);
+        self::assertSame(200, $secondResponse?->getStatusCode());
+    }
+
+    public function testRequestPostWithParameters(): void
+    {
+        $context = new FakeBrowserContext();
+        $client = PlaywrightClient::fromContext($context);
+
+        $client->request(
+            'POST',
+            'http://example.test/submit',
+            ['name' => 'John', 'email' => 'john@example.com']
+        );
+
+        $response = $client->getLastResponse();
+
+        self::assertNotNull($response);
+        self::assertSame(200, $response->getStatusCode());
+    }
+
+    public function testRequestPutWithContent(): void
+    {
+        $context = new FakeBrowserContext();
+        $client = PlaywrightClient::fromContext($context);
+
+        $client->request(
+            'PUT',
+            'http://example.test/update',
+            ['data' => 'updated']
+        );
+
+        $response = $client->getLastResponse();
+
+        self::assertNotNull($response);
+        self::assertSame(200, $response->getStatusCode());
+    }
+
+    public function testRequestHeadMethodUsesNavigate(): void
+    {
+        $context = new FakeBrowserContext();
+        $client = PlaywrightClient::fromContext($context);
+
+        $client->request('HEAD', 'http://example.test/check');
+
+        $response = $client->getLastResponse();
+
+        self::assertNotNull($response);
+        self::assertSame(200, $response->getStatusCode());
+    }
+
+    public function testApplyServerParamsWithHttpHeaders(): void
+    {
+        $context = new FakeBrowserContext();
+        $client = PlaywrightClient::fromContext($context);
+
+        $client->request(
+            'GET',
+            'http://example.test/api',
+            [],
+            [],
+            ['HTTP_AUTHORIZATION' => 'Bearer token123', 'HTTP_ACCEPT' => 'application/json']
+        );
+
+        $response = $client->getLastResponse();
+
+        self::assertNotNull($response);
+        // Verify headers were applied
+        self::assertSame('Bearer token123', $context->extraHTTPHeaders['authorization'] ?? null);
+        self::assertSame('application/json', $context->extraHTTPHeaders['accept'] ?? null);
+    }
+
+    public function testApplyServerParamsWithPhpAuth(): void
+    {
+        $context = new FakeBrowserContext();
+        $client = PlaywrightClient::fromContext($context);
+
+        $client->request(
+            'GET',
+            'http://example.test/protected',
+            [],
+            [],
+            ['PHP_AUTH_USER' => 'admin', 'PHP_AUTH_PW' => 'secret']
+        );
+
+        $response = $client->getLastResponse();
+
+        self::assertNotNull($response);
+        // Verify credentials were set
+        self::assertSame(['username' => 'admin', 'password' => 'secret'], $context->httpCredentials);
+    }
+
+    public function testApplyServerParamsHandlesNonStringValues(): void
+    {
+        $context = new FakeBrowserContext();
+        $client = PlaywrightClient::fromContext($context);
+
+        $client->request(
+            'GET',
+            'http://example.test/api',
+            [],
+            [],
+            ['HTTP_PORT' => 8080, 'HTTP_ENABLED' => true]
+        );
+
+        $response = $client->getLastResponse();
+
+        self::assertNotNull($response);
+        // Verify scalar values were converted to strings
+        self::assertSame('8080', $context->extraHTTPHeaders['port'] ?? null);
+        self::assertSame('1', $context->extraHTTPHeaders['enabled'] ?? null);
+    }
 }

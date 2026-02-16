@@ -94,6 +94,161 @@ final class FilesystemProxyTest extends TestCase
         $this->assertSame('found me', $asset->getContent());
     }
 
+    public function testLocateReturnsNullForRootPath(): void
+    {
+        $proxy = new FilesystemProxy([$this->tempDir]);
+        $this->assertNull($proxy->locate('/'));
+    }
+
+    public function testLocateReturnsNullForPathWithDotDotInMiddle(): void
+    {
+        $proxy = new FilesystemProxy([$this->tempDir]);
+        $this->assertNull($proxy->locate('/foo/../bar'));
+    }
+
+    public function testLocateGuessesMimeTypeForCssFiles(): void
+    {
+        file_put_contents($this->tempDir.'/style.css', 'body {}');
+        $proxy = new FilesystemProxy([$this->tempDir]);
+
+        $asset = $proxy->locate('/style.css');
+        $this->assertNotNull($asset);
+        $this->assertSame('text/css', $asset->getContentType());
+    }
+
+    public function testLocateGuessesMimeTypeForJavaScriptFiles(): void
+    {
+        file_put_contents($this->tempDir.'/script.js', 'console.log()');
+        $proxy = new FilesystemProxy([$this->tempDir]);
+
+        $asset = $proxy->locate('/script.js');
+        $this->assertNotNull($asset);
+        $this->assertStringContainsString('javascript', $asset->getContentType());
+    }
+
+    public function testLocateGuessesMimeTypeForImageFiles(): void
+    {
+        $imageTypes = [
+            'image.png' => 'image/png',
+            'photo.jpg' => 'image/jpeg',
+            'photo.jpeg' => 'image/jpeg',
+            'icon.svg' => 'image/svg+xml',
+            'animation.gif' => 'image/gif',
+        ];
+
+        $proxy = new FilesystemProxy([$this->tempDir]);
+
+        foreach ($imageTypes as $filename => $expectedMimeType) {
+            file_put_contents($this->tempDir.'/'.$filename, 'fake image data');
+            $asset = $proxy->locate('/'.$filename);
+
+            $this->assertNotNull($asset);
+            $this->assertSame($expectedMimeType, $asset->getContentType());
+        }
+    }
+
+    public function testLocateGuessesMimeTypeForJsonFiles(): void
+    {
+        file_put_contents($this->tempDir.'/data.json', '{}');
+        $proxy = new FilesystemProxy([$this->tempDir]);
+
+        $asset = $proxy->locate('/data.json');
+        $this->assertNotNull($asset);
+        $this->assertSame('application/json', $asset->getContentType());
+    }
+
+    public function testLocateGuessesMimeTypeForFontFiles(): void
+    {
+        // Just verify fonts get some mime type (not octet-stream)
+        // MimeTypes may return different variations like 'font/woff' or 'application/font-woff'
+        $fontFiles = ['font.woff', 'font.woff2', 'font.ttf', 'font.otf'];
+
+        $proxy = new FilesystemProxy([$this->tempDir]);
+
+        foreach ($fontFiles as $filename) {
+            file_put_contents($this->tempDir.'/'.$filename, 'fake font data');
+            $asset = $proxy->locate('/'.$filename);
+
+            $this->assertNotNull($asset);
+            $this->assertNotSame('application/octet-stream', $asset->getContentType(), "$filename should have a specific MIME type");
+        }
+    }
+
+    public function testLocateHandlesUppercaseExtensions(): void
+    {
+        file_put_contents($this->tempDir.'/TEST.CSS', 'body {}');
+        $proxy = new FilesystemProxy([$this->tempDir]);
+
+        $asset = $proxy->locate('/TEST.CSS');
+        $this->assertNotNull($asset);
+        $this->assertSame('text/css', $asset->getContentType());
+    }
+
+    public function testLocateReturnsOctetStreamForUnknownExtension(): void
+    {
+        // Use a truly unknown extension that MimeTypes won't recognize
+        file_put_contents($this->tempDir.'/file.unknownext123', 'unknown');
+        $proxy = new FilesystemProxy([$this->tempDir]);
+
+        $asset = $proxy->locate('/file.unknownext123');
+        $this->assertNotNull($asset);
+        $this->assertSame('application/octet-stream', $asset->getContentType());
+    }
+
+    public function testLocateReturnsOctetStreamForFileWithoutExtension(): void
+    {
+        file_put_contents($this->tempDir.'/README', 'readme content');
+        $proxy = new FilesystemProxy([$this->tempDir]);
+
+        $asset = $proxy->locate('/README');
+        $this->assertNotNull($asset);
+        $this->assertSame('application/octet-stream', $asset->getContentType());
+    }
+
+    public function testLocateIncludesFileSizeAndModificationTime(): void
+    {
+        $content = 'test content with specific size';
+        file_put_contents($this->tempDir.'/sized.txt', $content);
+        $expectedSize = strlen($content);
+
+        $proxy = new FilesystemProxy([$this->tempDir]);
+        $asset = $proxy->locate('/sized.txt');
+
+        $this->assertNotNull($asset);
+        $this->assertSame($expectedSize, $asset->getSize());
+        $this->assertNotNull($asset->getLastModified());
+        $this->assertIsInt($asset->getLastModified());
+    }
+
+    public function testLocateHandlesNestedDirectories(): void
+    {
+        @mkdir($this->tempDir.'/deep/nested/path', 0777, true);
+        file_put_contents($this->tempDir.'/deep/nested/path/file.txt', 'nested content');
+
+        $proxy = new FilesystemProxy([$this->tempDir]);
+        $asset = $proxy->locate('/deep/nested/path/file.txt');
+
+        $this->assertNotNull($asset);
+        $this->assertSame('nested content', $asset->getContent());
+    }
+
+    public function testLocateReturnsFirstMatchInMultipleRoots(): void
+    {
+        $root1 = $this->tempDir.'/root1';
+        $root2 = $this->tempDir.'/root2';
+        @mkdir($root1);
+        @mkdir($root2);
+
+        file_put_contents($root1.'/same.txt', 'from root1');
+        file_put_contents($root2.'/same.txt', 'from root2');
+
+        $proxy = new FilesystemProxy([$root1, $root2]);
+        $asset = $proxy->locate('/same.txt');
+
+        $this->assertNotNull($asset);
+        $this->assertSame('from root1', $asset->getContent());
+    }
+
     private function removeDirectory(string $dir): void
     {
         if (!is_dir($dir)) {
