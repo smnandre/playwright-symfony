@@ -1,25 +1,50 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Profile</title>
-</head>
-<body>
-    <h1>Welcome, {{ user.username }}</h1>
-    
-    <div class="user-info">
-        <p><strong>Name:</strong> {{ user.name }}</p>
-        <p><strong>Email:</strong> {{ user.email }}</p>
+{% extends 'base.html.twig' %}
+
+{% block title %}Profile - Playwright Symfony{% endblock %}
+
+{% block hero_title %}User Profile{% endblock %}
+
+{% block content %}
+    <div class="content">
+        <h1 style="color: #667eea; margin-bottom: 1rem;">Welcome, {{ user.username }}</h1>
+
+        <div class="user-info">
+            <p><strong>Name:</strong> {{ user.name }}</p>
+            <p><strong>Email:</strong> {{ user.email }}</p>
+        </div>
+
+        {% if app.request.query.get('success') %}
+            <div class="success">✓ Profile updated successfully</div>
+        {% endif %}
+
+        <h2>Update Profile</h2>
+        <form method="POST" action="/profile/update">
+            <label for="email">Email:</label>
+            <input type="email" id="email" name="email" value="{{ user.email }}" required>
+            <button type="submit">Update Email</button>
+        </form>
     </div>
 
-    {% if app.request.query.get('success') %}
-        <div class="success">Profile updated successfully</div>
-    {% endif %}
+    <div class="content">
+        <h2>More Information</h2>
+        <p style="color: #666; line-height: 1.8;">
+            This page demonstrates the CSS scroll-driven sticky header animation.
+            As you scroll down, the large "User Profile" title smoothly moves up into
+            the navbar and shrinks - all with pure CSS, no JavaScript!
+        </p>
+        <p style="color: #666; line-height: 1.8;">
+            Scroll back up to see the animation in reverse. The title will grow back
+            to its original size and position.
+        </p>
+    </div>
 
-    <h2>Update Profile</h2>
-    <form method="POST" action="/profile/update">
-        <label for="email">Email:</label>
-        <input type="email" id="email" name="email" value="{{ user.email }}" required>
-        <button type="submit">Update Email</button>
-    </form>
-</body>
-</html>
+    <div class="content">
+        <h2>How It Works</h2>
+        <ul style="margin-left: 2rem; color: #666; line-height: 1.8;">
+            <li>Uses <code>position: fixed</code> for the h1 element</li>
+            <li>Animates with <code>animation-timeline: scroll()</code></li>
+            <li>Smoothly transitions both position and font size</li>
+            <li>Stays in the navbar after scrolling past the animation range</li>
+        </ul>
+    </div>
+{% endblock %}
