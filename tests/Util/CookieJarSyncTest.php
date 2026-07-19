@@ -41,6 +41,50 @@ final class CookieJarSyncTest extends TestCase
         $this->assertSame('v2', $jar->get('c2', '/app', 'example.com')->getValue());
     }
 
+    public function testFromContextAcceptsNumericExpires(): void
+    {
+        $future = time() + 3600;
+
+        $context = new FakeBrowserContext();
+        $context->addCookies([
+            // Playwright reports "expires" as a number: -1 for session cookies,
+            // a Unix timestamp (possibly float) otherwise.
+            ['name' => 'session', 'value' => 's', 'domain' => 'localhost', 'path' => '/', 'expires' => -1],
+            ['name' => 'float', 'value' => 'f', 'domain' => 'localhost', 'path' => '/', 'expires' => $future + 0.5],
+            ['name' => 'int', 'value' => 'i', 'domain' => 'localhost', 'path' => '/', 'expires' => $future],
+        ]);
+
+        $jar = new CookieJar();
+        CookieJarSync::fromContext($jar, $context);
+
+        $session = $jar->get('session', '/', 'localhost');
+        $this->assertNotNull($session);
+        $this->assertNull($session->getExpiresTime());
+
+        $float = $jar->get('float', '/', 'localhost');
+        $this->assertNotNull($float);
+        $this->assertSame((string) $future, $float->getExpiresTime());
+
+        $int = $jar->get('int', '/', 'localhost');
+        $this->assertNotNull($int);
+        $this->assertSame((string) $future, $int->getExpiresTime());
+    }
+
+    public function testToJarFromUrlAcceptsNumericExpires(): void
+    {
+        $context = new FakeBrowserContext();
+        $context->addCookies([
+            ['name' => 'site', 'value' => 'main', 'domain' => 'localhost', 'path' => '/', 'expires' => -1],
+        ]);
+
+        $jar = new CookieJar();
+        CookieJarSync::toJarFromUrl($jar, $context, 'http://localhost/foo');
+
+        $site = $jar->get('site');
+        $this->assertNotNull($site);
+        $this->assertNull($site->getExpiresTime());
+    }
+
     public function testToJarFromUrlFiltersCookies(): void
     {
         $context = new FakeBrowserContext();

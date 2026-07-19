@@ -19,39 +19,68 @@ use Symfony\Component\BrowserKit\Cookie;
 use Symfony\Component\BrowserKit\CookieJar;
 
 /**
+ * Copies cookies from a Playwright browser context into a BrowserKit cookie jar.
+ *
  * @author Simon André <smn.andre@gmail.com>
  *
  * @internal
  */
 final class CookieJarSync
 {
+    /**
+     * Seeds the jar with every cookie currently stored in the browser context.
+     */
     public static function fromContext(CookieJar $jar, BrowserContextInterface $context): void
     {
-        foreach ($context->cookies() as $c) {
-            $jar->set(new Cookie(
-                name: (string) $c['name'],
-                value: (string) ($c['value'] ?? ''), // @phpstan-ignore nullCoalesce.offset
-                expires: $c['expires'] ?? null, // @phpstan-ignore nullCoalesce.offset
-                path: (string) ($c['path'] ?? '/'), // @phpstan-ignore nullCoalesce.offset
-                domain: (string) ($c['domain'] ?? ''), // @phpstan-ignore nullCoalesce.offset
-                secure: (bool) ($c['secure'] ?? false), // @phpstan-ignore nullCoalesce.offset
-                httponly: (bool) ($c['httpOnly'] ?? false), // @phpstan-ignore nullCoalesce.offset
-            ));
+        foreach ($context->cookies() as $cookie) {
+            $jar->set(self::toBrowserKitCookie($cookie));
         }
     }
 
+    /**
+     * Seeds the jar with the context cookies that match the given URL.
+     */
     public static function toJarFromUrl(CookieJar $jar, BrowserContextInterface $context, string $url): void
     {
-        foreach ($context->cookies([$url]) as $c) {
-            $jar->set(new Cookie(
-                name: (string) $c['name'],
-                value: (string) ($c['value'] ?? ''), // @phpstan-ignore nullCoalesce.offset
-                expires: $c['expires'] ?? null, // @phpstan-ignore nullCoalesce.offset
-                path: (string) ($c['path'] ?? '/'), // @phpstan-ignore nullCoalesce.offset
-                domain: (string) ($c['domain'] ?? ''), // @phpstan-ignore nullCoalesce.offset
-                secure: (bool) ($c['secure'] ?? false), // @phpstan-ignore nullCoalesce.offset
-                httponly: (bool) ($c['httpOnly'] ?? false), // @phpstan-ignore nullCoalesce.offset
-            ));
+        foreach ($context->cookies([$url]) as $cookie) {
+            $jar->set(self::toBrowserKitCookie($cookie));
         }
+    }
+
+    /**
+     * @param array<string, mixed> $cookie
+     */
+    private static function toBrowserKitCookie(array $cookie): Cookie
+    {
+        return new Cookie(
+            name: self::toString($cookie['name'] ?? ''),
+            value: self::toString($cookie['value'] ?? ''),
+            expires: self::normalizeExpires($cookie['expires'] ?? null),
+            path: self::toString($cookie['path'] ?? '/'),
+            domain: self::toString($cookie['domain'] ?? ''),
+            secure: (bool) ($cookie['secure'] ?? false),
+            httponly: (bool) ($cookie['httpOnly'] ?? false),
+        );
+    }
+
+    /**
+     * Playwright reports "expires" as a number: -1 for session cookies, a Unix
+     * timestamp (possibly float) otherwise. BrowserKit expects string|int|null,
+     * and treats any past timestamp as expired, so negatives must map to null.
+     */
+    private static function normalizeExpires(mixed $expires): ?int
+    {
+        if (!is_numeric($expires)) {
+            return null;
+        }
+
+        $timestamp = (int) $expires;
+
+        return $timestamp < 0 ? null : $timestamp;
+    }
+
+    private static function toString(mixed $value): string
+    {
+        return is_scalar($value) ? (string) $value : '';
     }
 }
