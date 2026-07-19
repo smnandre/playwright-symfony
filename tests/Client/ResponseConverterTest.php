@@ -18,6 +18,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Playwright\Symfony\Client\ResponseConverter;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -212,6 +213,45 @@ class ResponseConverterTest extends TestCase
 
         $this->assertSame('value1, value2', $opts['headers']['x-custom-multi']);
         $this->assertSame('Accept, Accept-Encoding', $opts['headers']['vary']);
+    }
+
+    public function testFormatHeadersKeepsSetCookieValuesSeparate(): void
+    {
+        $headers = [
+            'set-cookie' => [
+                'sid=abc; expires=Wed, 21 Oct 2026 07:28:00 GMT; path=/',
+                'theme=dark; path=/',
+            ],
+            'x-multi' => ['a', 'b'],
+        ];
+
+        $formatted = $this->converter->formatHeaders($headers);
+
+        $this->assertSame(
+            [
+                'sid=abc; expires=Wed, 21 Oct 2026 07:28:00 GMT; path=/',
+                'theme=dark; path=/',
+            ],
+            $formatted['set-cookie'],
+        );
+        $this->assertSame('a, b', $formatted['x-multi']);
+    }
+
+    public function testPrepareFulfillOptionsJoinsSetCookieWithNewline(): void
+    {
+        $response = new Response('', 200);
+        $response->headers->setCookie(Cookie::create('sid', 'abc'));
+        $response->headers->setCookie(Cookie::create('theme', 'dark'));
+
+        $opts = $this->converter->prepareFulfillOptions($response);
+
+        $this->assertIsString($opts['headers']['set-cookie']);
+        // Playwright's fulfill convention: multiple Set-Cookie values are joined
+        // with "\n" and split back into separate headers by the browser driver.
+        $cookies = explode("\n", $opts['headers']['set-cookie']);
+        $this->assertCount(2, $cookies);
+        $this->assertStringStartsWith('sid=abc;', $cookies[0]);
+        $this->assertStringStartsWith('theme=dark;', $cookies[1]);
     }
 
     public function testPrepareFulfillOptionsWithNullContentType(): void

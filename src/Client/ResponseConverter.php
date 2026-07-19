@@ -80,7 +80,7 @@ class ResponseConverter
 
         $options = [
             'status' => $response->getStatusCode(),
-            'headers' => $this->stripContentLength($headers),
+            'headers' => $this->flattenForFulfill($this->stripContentLength($headers)),
         ];
 
         if ($contentType) {
@@ -100,16 +100,24 @@ class ResponseConverter
     }
 
     /**
+     * Formats response headers for BrowserKit.
+     *
+     * Multiple values are joined with ", " except Set-Cookie, which is the only
+     * header that cannot be comma-joined (cookie expiry dates contain commas and
+     * each cookie must stay a separate header). Set-Cookie values are kept as a
+     * list, which BrowserKit responses accept as-is.
+     *
      * @param array<string, list<string|null>|string|null> $headers
      *
-     * @return array<string, string>
+     * @return array<string, string|list<string>>
      */
     public function formatHeaders(array $headers): array
     {
         $formatted = [];
         foreach ($headers as $name => $values) {
             if (is_array($values)) {
-                $formatted[$name] = implode(', ', array_filter($values, fn ($v) => null !== $v));
+                $clean = array_values(array_filter($values, static fn (?string $v): bool => null !== $v));
+                $formatted[$name] = 'set-cookie' === strtolower((string) $name) ? $clean : implode(', ', $clean);
             } else {
                 $formatted[$name] = (string) $values;
             }
@@ -119,9 +127,29 @@ class ResponseConverter
     }
 
     /**
-     * @param array<string, string> $headers
+     * Flattens formatted headers into the dict shape expected by route.fulfill().
+     *
+     * Playwright's fulfill headers hold one string per name; the browser driver
+     * splits a "\n"-joined Set-Cookie value back into separate headers.
+     *
+     * @param array<string, string|list<string>> $headers
      *
      * @return array<string, string>
+     */
+    private function flattenForFulfill(array $headers): array
+    {
+        $flattened = [];
+        foreach ($headers as $name => $value) {
+            $flattened[$name] = is_array($value) ? implode("\n", $value) : $value;
+        }
+
+        return $flattened;
+    }
+
+    /**
+     * @param array<string, string|list<string>> $headers
+     *
+     * @return array<string, string|list<string>>
      */
     private function stripContentLength(array $headers): array
     {
