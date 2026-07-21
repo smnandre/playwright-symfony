@@ -72,6 +72,34 @@ class PlaywrightExtensionTest extends TestCase
         $this->assertFalse($this->container->hasParameter('playwright.debug'));
     }
 
+    public function testLoadDisabledRegistersNoService(): void
+    {
+        $this->extension->load([['enabled' => false]], $this->container);
+
+        $this->assertSame([], array_diff($this->container->getServiceIds(), ['service_container']));
+    }
+
+    public function testContainerCompilesWhenDisabled(): void
+    {
+        $this->extension->load([['enabled' => false]], $this->container);
+
+        $this->container->compile();
+
+        $this->assertTrue($this->container->isCompiled());
+    }
+
+    public function testContainerCompilesWhenEnabled(): void
+    {
+        $this->container->setParameter('kernel.project_dir', __DIR__);
+        $this->container->setParameter('kernel.debug', false);
+
+        $this->extension->load([['enabled' => true]], $this->container);
+
+        $this->container->compile();
+
+        $this->assertTrue($this->container->isCompiled());
+    }
+
     public function testGetAlias(): void
     {
         $this->assertEquals('playwright', $this->extension->getAlias());

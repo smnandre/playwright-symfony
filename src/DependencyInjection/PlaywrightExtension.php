@@ -31,17 +31,22 @@ use Symfony\Component\DependencyInjection\Reference;
  */
 final class PlaywrightExtension extends Extension
 {
+    /**
+     * When "playwright.enabled" is false, no service and no parameter is registered:
+     * services.php references playwright.* parameters that are only set below, so
+     * loading it for a disabled bundle would break container compilation.
+     */
     public function load(array $configs, ContainerBuilder $container): void
     {
         $configuration = new Configuration();
         $config = $this->processConfiguration($configuration, $configs);
 
-        $loader = new PhpFileLoader($container, new FileLocator(__DIR__.'/../../config'));
-        $loader->load('services.php');
-
         if (!$config['enabled']) {
             return;
         }
+
+        $loader = new PhpFileLoader($container, new FileLocator(__DIR__.'/../../config'));
+        $loader->load('services.php');
 
         $container->setParameter('playwright.intercepted_hosts', $config['intercepted_hosts']); // @phpstan-ignore argument.type
         $container->setParameter('playwright.debug', $config['debug']); // @phpstan-ignore argument.type

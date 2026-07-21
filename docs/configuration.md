@@ -26,6 +26,13 @@ playwright:
 
 ## Options
 
+### `enabled`
+
+**Type**: `bool` | **Default**: `true`
+
+When set to `false`, the bundle registers no service and no parameter. Use this to keep the bundle
+in `config/bundles.php` while deactivating it for a specific environment.
+
 ### `intercepted_hosts`
 
 **Type**: `string[]` | **Default**: `['localhost', '127.0.0.1', 'testapp.local']`
