@@ -119,12 +119,18 @@ final class AssetServer
         ];
 
         if ('HEAD' !== $method) {
-            $body = $asset->getContent();
-            if ($this->isBinaryContentType($asset->getContentType())) {
-                $options['body'] = base64_encode($body);
-                $options['isBase64'] = true;
+            $path = $asset->hasInlineContent() ? null : $asset->getPath();
+            $localPath = null !== $path ? realpath($path) : false;
+            if (false !== $localPath && is_file($localPath)) {
+                $options['path'] = $localPath;
             } else {
-                $options['body'] = $body;
+                $body = $asset->getContent();
+                if ($this->isBinaryContentType($asset->getContentType())) {
+                    $options['body'] = base64_encode($body);
+                    $options['isBase64'] = true;
+                } else {
+                    $options['body'] = $body;
+                }
             }
         }
 

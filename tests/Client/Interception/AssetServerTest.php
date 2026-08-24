@@ -270,23 +270,46 @@ final class AssetServerTest extends TestCase
         self::assertSame((string) strlen($content), $result['headers']['content-length']);
     }
 
-    public function testHandleWithAssetFromFilePath(): void
+    public function testHandleReturnsLocalFilePathWithoutReadingContent(): void
     {
         $tempFile = tempnam(sys_get_temp_dir(), 'asset_server_test_');
         self::assertIsString($tempFile);
-        file_put_contents($tempFile, 'file content');
+        file_put_contents($tempFile, "\x89PNG\r\n\x1a\n");
 
-        $asset = new AssetFile($tempFile, filemtime($tempFile), filesize($tempFile), 'text/plain');
+        $asset = new AssetFile($tempFile, filemtime($tempFile), filesize($tempFile), 'image/png');
 
         $locator = $this->createMockLocator($asset);
         $server = new AssetServer([$locator], ['/assets']);
 
         try {
-            $result = $server->handle('http://localhost/assets/test.txt');
+            $result = $server->handle('http://localhost/assets/test.png');
 
             self::assertIsArray($result);
-            self::assertSame('file content', $result['body']);
+            self::assertSame(realpath($tempFile), $result['path']);
+            self::assertArrayNotHasKey('body', $result);
+            self::assertArrayNotHasKey('isBase64', $result);
             self::assertSame((string) filesize($tempFile), $result['headers']['content-length']);
+        } finally {
+            @unlink($tempFile);
+        }
+    }
+
+    public function testHandlePrefersInlineContentOverLocalFilePath(): void
+    {
+        $tempFile = tempnam(sys_get_temp_dir(), 'asset_server_test_');
+        self::assertIsString($tempFile);
+        file_put_contents($tempFile, 'source content');
+
+        $asset = new AssetFile($tempFile, filemtime($tempFile), 16, 'text/css', 'compiled content');
+        $locator = $this->createMockLocator($asset);
+        $server = new AssetServer([$locator], ['/assets']);
+
+        try {
+            $result = $server->handle('http://localhost/assets/test.css');
+
+            self::assertIsArray($result);
+            self::assertSame('compiled content', $result['body']);
+            self::assertArrayNotHasKey('path', $result);
         } finally {
             @unlink($tempFile);
         }
