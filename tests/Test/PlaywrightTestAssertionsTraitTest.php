@@ -16,9 +16,11 @@ namespace Playwright\Symfony\Tests\Test;
 
 use PHPUnit\Framework\Attributes\CoversTrait;
 use PHPUnit\Framework\TestCase;
+use Playwright\Browser\BrowserContextInterface;
 use Playwright\Locator\LocatorInterface;
 use Playwright\Page\PageInterface;
 use Playwright\Symfony\Test\Assert\PlaywrightTestAssertionsTrait;
+use Playwright\Tracing\TracingInterface;
 use Symfony\Component\HttpFoundation\Response;
 
 #[CoversTrait(PlaywrightTestAssertionsTrait::class)]
@@ -57,30 +59,44 @@ class PlaywrightTestAssertionsTraitTest extends TestCase
 
     public function testAssertSelectorVisible(): void
     {
-        $this->page = $this->createMock(PageInterface::class);
         $locator = $this->createMock(LocatorInterface::class);
-        $locator->expects($this->once())->method('isVisible')->willReturn(true);
+        $locator->expects($this->exactly(2))->method('isVisible')->willReturnOnConsecutiveCalls(false, true);
 
+        $this->page = $this->createPageWithTracing();
         $this->page->expects($this->once())
             ->method('locator')
             ->with('.visible')
             ->willReturn($locator);
+        $locator->expects($this->once())->method('page')->willReturn($this->page);
 
         $this->assertSelectorVisible('.visible');
     }
 
     public function testAssertSelectorHidden(): void
     {
-        $this->page = $this->createMock(PageInterface::class);
         $locator = $this->createMock(LocatorInterface::class);
-        $locator->expects($this->once())->method('isHidden')->willReturn(true);
+        $locator->expects($this->exactly(2))->method('isVisible')->willReturnOnConsecutiveCalls(true, false);
 
+        $this->page = $this->createPageWithTracing();
         $this->page->expects($this->once())
             ->method('locator')
             ->with('.hidden')
             ->willReturn($locator);
+        $locator->expects($this->once())->method('page')->willReturn($this->page);
 
         $this->assertSelectorHidden('.hidden');
+    }
+
+    public function testExpectAcceptsPageAndRecordsAssertion(): void
+    {
+        $this->page = $this->createPageWithTracing();
+        $this->page->expects($this->once())->method('url')->willReturn('http://localhost/ready');
+
+        $before = $this->numberOfAssertionsPerformed();
+
+        $this->expect($this->page)->toHaveURL('http://localhost/ready');
+
+        $this->assertSame($before + 1, $this->numberOfAssertionsPerformed());
     }
 
     public function testAssertResponseStatusCode(): void
@@ -134,5 +150,20 @@ class PlaywrightTestAssertionsTraitTest extends TestCase
     protected function getLastResponse(): ?Response
     {
         return $this->response;
+    }
+
+    private function createPageWithTracing(): PageInterface
+    {
+        $tracing = $this->createMock(TracingInterface::class);
+        $tracing->expects($this->once())->method('group');
+        $tracing->expects($this->once())->method('groupEnd');
+
+        $context = $this->createMock(BrowserContextInterface::class);
+        $context->method('tracing')->willReturn($tracing);
+
+        $page = $this->createMock(PageInterface::class);
+        $page->method('context')->willReturn($context);
+
+        return $page;
     }
 }
